@@ -11,7 +11,8 @@ const TransactionDebugger = ({ onStatus }) => {
     results, 
     error, 
     createUnsignedTransaction,
-    createSignedTransaction,
+    createSignedTransactionV2,        // ✅ NEW: Use signAsync approach
+    createSignedTransaction,          // ⚠️ LEGACY: Keep for comparison
     testWithWorkingParameters,
     getPaymentInfo,
     clearResults
@@ -63,7 +64,7 @@ const TransactionDebugger = ({ onStatus }) => {
     }
   };
 
-  // Test signed transaction creation
+  // Test signed transaction creation using signAsync (v10+ approach)
   const handleTestSignedTransaction = async () => {
     if (!account) {
       onStatus('Please connect your wallet first', 'error');
@@ -71,7 +72,7 @@ const TransactionDebugger = ({ onStatus }) => {
     }
 
     try {
-      onStatus('🔍 Creating signed transaction...', 'info');
+      onStatus('🔍 Creating signed transaction using signAsync...', 'info');
       
       const injector = await getInjector();
       
@@ -80,6 +81,51 @@ const TransactionDebugger = ({ onStatus }) => {
         firstParty: account.address
       } : customParams;
 
+      // ✅ Use the NEW signAsync method (should not fail with DataCloneError)
+      const result = await createSignedTransactionV2(
+        account.address,
+        injector,
+        params.fileHash,
+        params.firstParty,
+        params.secondParty,
+        params.thirdParty,
+        params.contractName,
+        params.metadata
+      );
+
+      if (result.success) {
+        onStatus('✅ Signed transaction created successfully using signAsync!', 'success');
+      } else {
+        onStatus(`❌ Failed to create signed transaction: ${result.error}`, 'error');
+      }
+
+    } catch (err) {
+      if (err.message.includes('Cancelled')) {
+        onStatus('❌ Transaction signing was cancelled', 'error');
+      } else {
+        onStatus(`❌ Signed transaction failed: ${err.message}`, 'error');
+      }
+    }
+  };
+
+  // Test legacy manual payload signing (for comparison)
+  const handleTestLegacySignedTransaction = async () => {
+    if (!account) {
+      onStatus('Please connect your wallet first', 'error');
+      return;
+    }
+
+    try {
+      onStatus('⚠️ Testing legacy manual payload signing (may fail)...', 'info');
+      
+      const injector = await getInjector();
+      
+      const params = useCustomParams ? {
+        ...customParams,
+        firstParty: account.address
+      } : customParams;
+
+      // ⚠️ Use the LEGACY manual payload method (likely to fail with DataCloneError)
       const result = await createSignedTransaction(
         account.address,
         injector,
@@ -92,16 +138,18 @@ const TransactionDebugger = ({ onStatus }) => {
       );
 
       if (result.success) {
-        onStatus('✅ Signed transaction created successfully!', 'success');
+        onStatus('✅ Legacy signing worked (unexpected but good)!', 'success');
       } else {
-        onStatus(`❌ Failed to create signed transaction: ${result.error}`, 'error');
+        onStatus(`❌ Legacy signing failed as expected: ${result.error}`, 'warning');
       }
 
     } catch (err) {
-      if (err.message.includes('Cancelled')) {
+      if (err.message.includes('DataCloneError')) {
+        onStatus('❌ Legacy method failed with DataCloneError (as expected)', 'warning');
+      } else if (err.message.includes('Cancelled')) {
         onStatus('❌ Transaction signing was cancelled', 'error');
       } else {
-        onStatus(`❌ Signed transaction failed: ${err.message}`, 'error');
+        onStatus(`❌ Legacy signing failed: ${err.message}`, 'error');
       }
     }
   };
@@ -249,7 +297,7 @@ const TransactionDebugger = ({ onStatus }) => {
       )}
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <button
           onClick={handleTestCallData}
           disabled={loading}
@@ -271,9 +319,22 @@ const TransactionDebugger = ({ onStatus }) => {
           {loading ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
           ) : (
-            '✍️'
+            '✅'
           )}
-          Create Signed
+          signAsync Method
+        </button>
+
+        <button
+          onClick={handleTestLegacySignedTransaction}
+          disabled={loading || !account}
+          className="bg-yellow-600 text-white px-4 py-3 rounded-xl font-medium hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          ) : (
+            '⚠️'
+          )}
+          Legacy Method
         </button>
 
         <button
@@ -474,7 +535,8 @@ const TransactionDebugger = ({ onStatus }) => {
         <p><strong>What each test does:</strong></p>
         <div className="pl-2 space-y-1">
           <p>• 🧪 <strong>Test Call Data:</strong> Verify unsigned transaction encoding matches Polkadot Apps</p>
-          <p>• ✍️ <strong>Create Signed:</strong> Generate complete signed transaction with your wallet</p>
+          <p>• ✅ <strong>signAsync Method:</strong> Generate signed transaction using v10+ signAsync (recommended)</p>
+          <p>• ⚠️ <strong>Legacy Method:</strong> Test old manual payload signing (will likely fail with DataCloneError)</p>
           <p>• 🎯 <strong>Test All:</strong> Run comprehensive test with exact working parameters</p>
           <p>• 💰 <strong>Payment Info:</strong> Check if transaction validation passes (fee estimation)</p>
         </div>

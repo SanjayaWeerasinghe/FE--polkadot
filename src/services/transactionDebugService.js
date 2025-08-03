@@ -1,4 +1,4 @@
-// transactionDebugService.js - Create and analyze signed transactions without sending
+// transactionDebugService.js - Updated with signAsync approach (Option 2)
 
 import { ApiPromise, WsProvider } from '@polkadot/api';
 
@@ -68,7 +68,101 @@ class TransactionDebugService {
     };
   }
 
-  // Create signed transaction WITHOUT sending
+  // ✅ NEW: Option 2 - Create signed transaction using signAsync (RECOMMENDED)
+  async createSignedTransactionV2(
+    accountAddress,
+    injector,
+    fileHash,
+    firstParty,
+    secondParty,
+    thirdParty,
+    contractName,
+    metadata,
+    options = {}
+  ) {
+    await this.connect();
+
+    try {
+      console.log('🔍 Creating signed transaction using signAsync (v10+ approach)...');
+
+      const contractNameBytes = this._stringToU8Array(contractName);
+      const metadataBytes = this._stringToU8Array(metadata);
+
+      // Create the transaction
+      const tx = this.api.tx.digitalNotarizedContract.initiateContract(
+        fileHash,
+        firstParty,
+        secondParty,
+        thirdParty,
+        contractNameBytes,
+        metadataBytes
+      );
+
+      // Get blockchain context
+      const [currentNonce, currentBlock, runtimeVersion] = await Promise.all([
+        this.api.rpc.system.accountNextIndex(accountAddress),
+        this.api.rpc.chain.getHeader(),
+        this.api.rpc.state.getRuntimeVersion()
+      ]);
+
+      console.log('📊 Transaction context:', {
+        nonce: currentNonce.toString(),
+        blockNumber: currentBlock.number.toString(),
+        blockHash: currentBlock.hash.toHex(),
+        specVersion: runtimeVersion.specVersion.toString(),
+        transactionVersion: runtimeVersion.transactionVersion.toString()
+      });
+
+      // ✅ Use signAsync - the v10+ way (same as your working blockchainService.js)
+      const signedTx = await tx.signAsync(accountAddress, { 
+        signer: injector.signer,
+        nonce: options.nonce || currentNonce,
+        blockHash: options.blockHash || currentBlock.hash,
+        era: options.era || this.api.createType('ExtrinsicEra', { 
+          current: currentBlock.number, 
+          period: 64 
+        })
+      });
+
+      const signedHex = signedTx.toHex();
+      
+      console.log('✅ Signed transaction created successfully:', signedHex.slice(0, 50) + '...');
+
+      // Analyze the signed transaction
+      const analysis = this._analyzeSignedTransaction(signedHex, null, tx.method.toHex());
+
+      return {
+        success: true,
+        signedTransaction: signedHex,
+        unsignedCallData: tx.method.toHex(),
+        signature: signedTx.signature.toHex(),
+        signingOptions: {
+          nonce: currentNonce.toString(),
+          blockHash: currentBlock.hash.toHex(),
+          era: options.era ? 'custom' : 'mortal(64)'
+        },
+        analysis,
+        context: {
+          nonce: currentNonce.toString(),
+          blockNumber: currentBlock.number.toString(),
+          blockHash: currentBlock.hash.toHex(),
+          accountAddress,
+          specVersion: runtimeVersion.specVersion.toString(),
+          transactionVersion: runtimeVersion.transactionVersion.toString()
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ signAsync failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        stack: error.stack
+      };
+    }
+  }
+
+  // ⚠️ LEGACY: Option 1 - Manual payload signing (PROBLEMATIC - kept for reference)
   async createSignedTransaction(
     accountAddress,
     injector,
@@ -80,6 +174,9 @@ class TransactionDebugService {
     metadata,
     options = {}
   ) {
+    console.warn('⚠️ Using legacy manual payload signing - may fail due to serialization issues');
+    console.log('💡 Consider using createSignedTransactionV2() instead');
+    
     await this.connect();
 
     try {
@@ -142,7 +239,7 @@ class TransactionDebugService {
 
       console.log('📋 Payload to sign:', payload.toHex());
 
-      // Sign the payload
+      // ⚠️ This may fail due to DataCloneError in browser extensions
       const signatureResult = await injector.signer.signPayload(payload);
       console.log('✍️ Signature result:', signatureResult);
 
@@ -195,7 +292,7 @@ class TransactionDebugService {
     
     const analysis = {
       signedTransactionLength: signedHex.length,
-      payloadLength: payloadHex.length,
+      payloadLength: payloadHex ? payloadHex.length : 'N/A',
       callDataLength: callDataHex.length,
       structure: {},
       comparison: {}
@@ -203,7 +300,9 @@ class TransactionDebugService {
 
     // Check if call data is contained in signed transaction
     analysis.comparison.callDataInSigned = signedHex.includes(callDataHex.slice(2)); // Remove 0x
-    analysis.comparison.payloadInSigned = signedHex.includes(payloadHex.slice(2));
+    if (payloadHex) {
+      analysis.comparison.payloadInSigned = signedHex.includes(payloadHex.slice(2));
+    }
 
     // Analyze structure
     if (signedHex.startsWith('0x')) {
@@ -276,15 +375,15 @@ class TransactionDebugService {
     return 'Call data';
   }
 
-  // Test with exact parameters from your working Polkadot Apps transaction
+  // ✅ UPDATED: Test with exact parameters using the new signAsync method
   async testWithWorkingParameters(accountAddress, injector) {
-    console.log('🧪 Testing with exact working parameters...');
+    console.log('🧪 Testing with exact working parameters using signAsync...');
     
     const workingParams = {
-      fileHash: '0x65f61c36aa4608d0d7c4b46afcf8c57edc92210dddd533a7e42a6788cd06edea',
-      firstParty: 'd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d',
-      secondParty: '8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48',
-      thirdParty: '90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22',
+      fileHash: '0x075ad2e301245c13c580ed83c9c6b6b07b25c8bd33895d2f43b275c48fa2f4e1',
+      firstParty: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+      secondParty: '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+      thirdParty: '5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc',
       contractName: 'Sanjaya',
       metadata: 'Sanjaya'
     };
@@ -301,8 +400,8 @@ class TransactionDebugService {
 
     console.log('📝 Unsigned transaction created:', unsignedResult.callData);
 
-    // Now create signed transaction
-    const signedResult = await this.createSignedTransaction(
+    // ✅ Now create signed transaction using the NEW signAsync method
+    const signedResult = await this.createSignedTransactionV2(
       accountAddress,
       injector,
       workingParams.fileHash,

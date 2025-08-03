@@ -1,4 +1,4 @@
-// hooks/useTransactionDebug.js - React hook for transaction debugging
+// hooks/useTransactionDebug.js - Updated to use signAsync approach
 
 import { useState, useCallback } from 'react';
 import transactionDebugService from '../services/transactionDebugService';
@@ -46,7 +46,45 @@ export const useTransactionDebug = () => {
     }
   }, []);
 
-  // Create signed transaction without sending
+  // ✅ NEW: Create signed transaction using signAsync (RECOMMENDED)
+  const createSignedTransactionV2 = useCallback(async (
+    accountAddress,
+    injector,
+    fileHash,
+    firstParty,
+    secondParty,
+    thirdParty,
+    contractName,
+    metadata,
+    options = {}
+  ) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await transactionDebugService.createSignedTransactionV2(
+        accountAddress,
+        injector,
+        fileHash,
+        firstParty,
+        secondParty,
+        thirdParty,
+        contractName,
+        metadata,
+        options
+      );
+
+      setResults({ type: 'signed', data: result });
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ⚠️ LEGACY: Create signed transaction with manual payload (PROBLEMATIC)
   const createSignedTransaction = useCallback(async (
     accountAddress,
     injector,
@@ -84,7 +122,7 @@ export const useTransactionDebug = () => {
     }
   }, []);
 
-  // Test with working parameters
+  // Test with working parameters (now uses signAsync)
   const testWithWorkingParameters = useCallback(async (accountAddress, injector) => {
     setLoading(true);
     setError(null);
@@ -170,10 +208,11 @@ export const useTransactionDebug = () => {
     results,
     error,
 
-    // Actions
+    // Actions (NEW signAsync method is primary)
     createUnsignedTransaction,
-    createSignedTransaction,
-    testWithWorkingParameters,
+    createSignedTransactionV2,        // ✅ NEW: Recommended signAsync approach
+    createSignedTransaction,          // ⚠️ LEGACY: Manual payload (may fail)
+    testWithWorkingParameters,        // ✅ UPDATED: Now uses signAsync
     getPaymentInfo,
     compareTransactions,
     clearResults,
