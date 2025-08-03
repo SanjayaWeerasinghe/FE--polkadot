@@ -122,7 +122,58 @@ export const useTransactionDebug = () => {
     }
   }, []);
 
-  // Test with working parameters (now uses signAsync)
+  // ✅ NEW: Send manual transaction from hex string
+  const sendManualTransaction = useCallback(async (signedTransactionHex) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await transactionDebugService.sendManualTransaction(signedTransactionHex);
+      setResults({ type: 'manual', data: result });
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  const directSignAndSend = useCallback(async (
+    accountAddress,
+    injector,
+    fileHash,
+    firstParty,
+    secondParty,
+    thirdParty,
+    contractName,
+    metadata,
+    options = {}
+  ) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await transactionDebugService.directSignAndSend(
+        accountAddress,
+        injector,
+        fileHash,
+        firstParty,
+        secondParty,
+        thirdParty,
+        contractName,
+        metadata,
+        options
+      );
+
+      setResults({ type: 'sent', data: result });
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
   const testWithWorkingParameters = useCallback(async (accountAddress, injector) => {
     setLoading(true);
     setError(null);
@@ -212,6 +263,8 @@ export const useTransactionDebug = () => {
     createUnsignedTransaction,
     createSignedTransactionV2,        // ✅ NEW: Recommended signAsync approach
     createSignedTransaction,          // ⚠️ LEGACY: Manual payload (may fail)
+    directSignAndSend,                // 🚀 NEW: Direct sign and send
+    sendManualTransaction,            // 📤 NEW: Send manual hex transaction
     testWithWorkingParameters,        // ✅ UPDATED: Now uses signAsync
     getPaymentInfo,
     compareTransactions,
