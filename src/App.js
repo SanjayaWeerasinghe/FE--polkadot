@@ -72,22 +72,22 @@ function App() {
         )}
 
         {/* NEW: Debug Toggle Button */}
-        <div className="mb-4 flex justify-end">
+        {/* <div className="mb-4 flex justify-end">
           <button
             onClick={() => setShowDebugger(!showDebugger)}
             className="bg-gray-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-700 transition-colors"
           >
             {showDebugger ? '🙈 Hide Debugger' : '🔬 Show Debugger'}
           </button>
-        </div>
+        </div> */}
 
         {/* NEW: Transaction Debugger */}
-        {showDebugger && (
+        {/* {showDebugger && (
           <TransactionDebugger onStatus={showStatus} />
-        )}
+        )} */}
 
         {/* QUICK INITIATE DEMO */}
-        <QuickInitiate />
+        {/* <QuickInitiate /> */}
 
         {/* Main Content */}
         <main className="animate-fadeInUp">
