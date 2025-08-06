@@ -590,7 +590,128 @@ class BlockchainService {
     });
   }
 
-  // Additional methods (deactivateContract, completeContract, etc.) 
+async deactivateContract(injector, accountAddress, contractHash, reason = 'User requested deactivation') {
+    return this.executeWithConnection(async (api) => {
+      try {
+        // 1. Validate inputs
+        if (!injector || !injector.signer) {
+          throw new Error('Invalid injector: signer not available');
+        }
+
+        if (!this._isValidAddress(accountAddress)) {
+          throw new Error(`Invalid account address: ${accountAddress}`);
+        }
+
+        if (!reason || reason.trim().length === 0) {
+          reason = 'User requested deactivation';
+        }
+
+        if (reason.length > 1024) {
+          throw new Error('Reason too long (max 1024 characters)');
+        }
+
+        // 2. Format parameters for blockchain
+        const formattedHash = this._formatFileHash(contractHash);
+        const reasonBytes = this._stringToU8Array(reason.trim());
+
+        console.log('🗑️ Creating deactivate contract transaction with parameters:', {
+          fileHash: formattedHash,
+          reason: reason.trim(),
+          reasonLength: reasonBytes.length,
+          deactivatedBy: accountAddress
+        });
+
+        // 3. Create the transaction object
+        const tx = api.tx.digitalNotarizedContract.deactivateContract(
+          formattedHash,  // T::Hash
+          reasonBytes     // Vec<u8>
+        );
+
+        // 4. Get payment information
+        try {
+          const paymentInfo = await tx.paymentInfo(accountAddress);
+          console.log('💰 Deactivation fee estimate:', {
+            partialFee: paymentInfo.partialFee.toHuman(),
+            weight: paymentInfo.weight.toHuman()
+          });
+        } catch (feeError) {
+          console.warn('⚠️ Could not get fee estimate:', feeError.message);
+        }
+
+        // 5. Sign and send transaction with comprehensive monitoring
+        console.log('📤 Sending deactivate contract transaction...');
+
+        return new Promise((resolve, reject) => {
+          let unsubscribe;
+          const timeout = setTimeout(() => {
+            if (unsubscribe) unsubscribe();
+            reject(new Error('Transaction timeout after 60 seconds'));
+          }, 60000);
+
+          tx.signAndSend(accountAddress, { signer: injector.signer }, (result) => {
+            console.log('📊 Transaction status:', result.status.type);
+
+            // Handle errors during transaction
+            if (result.status.isError) {
+              clearTimeout(timeout);
+              if (unsubscribe) unsubscribe();
+              reject(new Error('Transaction failed'));
+              return;
+            }
+
+            // Handle finalization (Success or Error)
+            if (result.status.isFinalized) {
+              clearTimeout(timeout);
+              if (unsubscribe) unsubscribe();
+              
+              if (result.dispatchError) {
+                const error = this._parseDispatchError(result.dispatchError, api);
+                reject(error);
+                return;
+              }
+
+              // Look for ContractDeactivated event
+              const deactivatedEvents = result.events.filter(({ event }) =>
+                event.section === 'digitalNotarizedContract' && 
+                event.method === 'ContractDeactivated'
+              );
+
+              console.log('✅ Contract deactivated successfully');
+              if (deactivatedEvents.length > 0) {
+                console.log('📋 Deactivation event data:', deactivatedEvents[0].event.data.toHuman());
+              }
+
+              resolve({
+                success: true,
+                blockHash: result.status.asFinalized.toHex(),
+                txHash: result.txHash.toHex(),
+                events: deactivatedEvents.map(({ event }) => event.data.toHuman())
+              });
+            }
+
+            if (result.dispatchError) {
+              clearTimeout(timeout);
+              if (unsubscribe) unsubscribe();
+              const error = this._parseDispatchError(result.dispatchError, api);
+              reject(error);
+            }
+          })
+          .then(unsub => { 
+            unsubscribe = unsub; 
+          })
+          .catch(error => {
+            clearTimeout(timeout);
+            reject(new Error(`Deactivate transaction failed: ${error.message}`));
+          });
+        });
+
+      } catch (error) {
+        console.error('💥 Deactivate transaction error:', error);
+        throw error;
+      }
+    });
+  }
+ 
   // would be updated similarly for v16 compatibility...
 
   // ========================================
