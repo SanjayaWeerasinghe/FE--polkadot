@@ -249,12 +249,12 @@ const InitiateContract = ({ onBack, onStatus }) => {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
+            {/* <button
               onClick={onViewContracts}
               className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
             >
               📊 View My Contracts
-            </button>
+            </button> */}
             
             <button
               onClick={() => {
@@ -391,7 +391,7 @@ const InitiateContract = ({ onBack, onStatus }) => {
           >
             ← Back
           </button>
-          <h2 className="text-3xl font-bold text-gray-800">📝 Initiate New Contract</h2>
+          <h2 className="text-3xl font-bold text-gray-800"> Initiate New Contract</h2>
         </div>
 
         {/* Error display banner */}
