@@ -14,12 +14,17 @@ const SignContract = ({ onBack, onStatus }) => {
 
   // Verify contract exists when file is uploaded
   React.useEffect(() => {
+    let isMounted = true; // Cleanup flag
+
     const verifyContract = async () => {
       if (!fileInfo?.hash || !account) return;
 
-      setVerifying(true);
+      if (isMounted) setVerifying(true);
+      
       try {
         const contractData = await checkContractExists(fileInfo.hash);
+        
+        if (!isMounted) return; // Don't update state if component unmounted
         
         if (contractData.exists) {
           setContractInfo(contractData);
@@ -29,21 +34,33 @@ const SignContract = ({ onBack, onStatus }) => {
           onStatus('❌ No contract found with this document hash', 'error');
         }
       } catch (error) {
+        if (!isMounted) return;
+        
         console.error('Contract verification error:', error);
         onStatus('❌ Error verifying contract', 'error');
         setContractInfo({ exists: false });
       } finally {
-        setVerifying(false);
+        if (isMounted) setVerifying(false);
       }
     };
 
     verifyContract();
-  }, [fileInfo?.hash, account, checkContractExists, onStatus]);
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, [fileInfo?.hash, account]); // Removed problematic dependencies
 
   // Handle contract signing
   const handleSign = async () => {
     if (!fileInfo?.hash || !account) {
       onStatus('Please upload a contract document first', 'error');
+      return;
+    }
+
+    if (!contractInfo?.exists) {
+      onStatus('Contract does not exist or is not verified', 'error');
       return;
     }
 

@@ -1,4 +1,4 @@
-// transactionDebugService.js - Create and analyze signed transactions without sending
+// transactionDebugService.js - Updated for Polkadot.js API v16.4.3 with TxExtension support
 
 import { ApiPromise, WsProvider } from '@polkadot/api';
 
@@ -7,14 +7,18 @@ class TransactionDebugService {
     this.api = null;
   }
 
-  // Connect to blockchain
+  // Connect to blockchain with v16 compatibility
   async connect(endpoint = 'wss://144.91.67.54:9946') {
     if (this.api && this.api.isConnected) {
       return this.api;
     }
 
     const provider = new WsProvider(endpoint);
-    this.api = await ApiPromise.create({ provider });
+    this.api = await ApiPromise.create({ 
+      provider,
+      // v16 automatically handles TxExtension format
+      noInitWarn: true, // Suppress warnings about unknown extensions
+    });
     await this.api.isReady;
     return this.api;
   }
@@ -68,8 +72,8 @@ class TransactionDebugService {
     };
   }
 
-  // Create signed transaction WITHOUT sending
-  async createSignedTransaction(
+  // Create signed transaction using v16 signAsync (RECOMMENDED)
+  async createSignedTransactionV2(
     accountAddress,
     injector,
     fileHash,
@@ -83,7 +87,7 @@ class TransactionDebugService {
     await this.connect();
 
     try {
-      console.log('🔍 Creating signed transaction for analysis...');
+      console.log('🔍 Creating signed transaction using v16 signAsync...');
 
       const contractNameBytes = this._stringToU8Array(contractName);
       const metadataBytes = this._stringToU8Array(metadata);
@@ -98,89 +102,66 @@ class TransactionDebugService {
         metadataBytes
       );
 
-      // Get current nonce
-      const currentNonce = await this.api.rpc.system.accountNextIndex(accountAddress);
-      
-      // Get current block info
-      const currentBlock = await this.api.rpc.chain.getHeader();
-      const blockHash = currentBlock.hash;
-      const blockNumber = currentBlock.number;
-
-      // Get runtime version
-      const runtimeVersion = await this.api.rpc.state.getRuntimeVersion();
+      // Get blockchain context
+      const [currentNonce, currentBlock, runtimeVersion] = await Promise.all([
+        this.api.rpc.system.accountNextIndex(accountAddress),
+        this.api.rpc.chain.getHeader(),
+        this.api.rpc.state.getRuntimeVersion()
+      ]);
 
       console.log('📊 Transaction context:', {
         nonce: currentNonce.toString(),
-        blockNumber: blockNumber.toString(),
-        blockHash: blockHash.toHex(),
+        blockNumber: currentBlock.number.toString(),
+        blockHash: currentBlock.hash.toHex(),
         specVersion: runtimeVersion.specVersion.toString(),
         transactionVersion: runtimeVersion.transactionVersion.toString()
       });
 
-      // Create signing options
-      const signingOptions = {
-        blockHash: blockHash,
-        era: this.api.createType('ExtrinsicEra', { current: blockNumber, period: 64 }),
-        nonce: currentNonce,
-        tip: 0,
-        ...options
-      };
-
-      console.log('📝 Signing options:', signingOptions);
-
-      // Create the payload to sign
-      const payload = this.api.createType('ExtrinsicPayload', {
-        method: tx.method,
-        era: signingOptions.era,
-        nonce: signingOptions.nonce,
-        tip: signingOptions.tip,
-        specVersion: runtimeVersion.specVersion,
-        transactionVersion: runtimeVersion.transactionVersion,
-        genesisHash: this.api.genesisHash,
-        blockHash: signingOptions.blockHash
+      // V16: signAsync automatically handles all TxExtension parameters
+      const signedTx = await tx.signAsync(accountAddress, { 
+        signer: injector.signer,
+        // V16 automatically includes all required TxExtension parameters:
+        // CheckNonZeroSender, CheckSpecVersion, CheckTxVersion, CheckGenesis,
+        // CheckEra, CheckNonce, CheckWeight, ChargeTransactionPayment,
+        // CheckMetadataHash, WeightReclaim
+        nonce: options.nonce || currentNonce,
+        blockHash: options.blockHash || currentBlock.hash,
+        era: options.era || this.api.createType('ExtrinsicEra', { 
+          current: currentBlock.number, 
+          period: 64 
+        })
       });
 
-      console.log('📋 Payload to sign:', payload.toHex());
-
-      // Sign the payload
-      const signatureResult = await injector.signer.signPayload(payload);
-      console.log('✍️ Signature result:', signatureResult);
-
-      // Create the signed extrinsic
-      const extrinsic = this.api.createType('Extrinsic', {
-        method: tx.method,
-        era: signingOptions.era,
-        nonce: signingOptions.nonce,
-        tip: signingOptions.tip,
-        signature: signatureResult.signature,
-        signer: accountAddress
-      });
-
-      const signedHex = extrinsic.toHex();
+      const signedHex = signedTx.toHex();
       
-      console.log('🎯 Final signed transaction:', signedHex);
+      console.log('✅ V16 signed transaction created successfully:', signedHex.slice(0, 50) + '...');
 
       // Analyze the signed transaction
-      const analysis = this._analyzeSignedTransaction(signedHex, payload.toHex(), tx.method.toHex());
+      const analysis = this._analyzeSignedTransaction(signedHex, null, tx.method.toHex());
 
       return {
         success: true,
         signedTransaction: signedHex,
         unsignedCallData: tx.method.toHex(),
-        payloadHex: payload.toHex(),
-        signature: signatureResult.signature,
-        signingOptions,
+        signature: signedTx.signature.toHex(),
+        signingOptions: {
+          nonce: currentNonce.toString(),
+          blockHash: currentBlock.hash.toHex(),
+          era: options.era ? 'custom' : 'mortal(64)'
+        },
         analysis,
         context: {
           nonce: currentNonce.toString(),
-          blockNumber: blockNumber.toString(),
-          blockHash: blockHash.toHex(),
-          accountAddress
+          blockNumber: currentBlock.number.toString(),
+          blockHash: currentBlock.hash.toHex(),
+          accountAddress,
+          specVersion: runtimeVersion.specVersion.toString(),
+          transactionVersion: runtimeVersion.transactionVersion.toString()
         }
       };
 
     } catch (error) {
-      console.error('❌ Signed transaction creation failed:', error);
+      console.error('❌ V16 signAsync failed:', error);
       return {
         success: false,
         error: error.message,
@@ -189,102 +170,341 @@ class TransactionDebugService {
     }
   }
 
-  // Analyze signed transaction structure
-  _analyzeSignedTransaction(signedHex, payloadHex, callDataHex) {
-    console.log('🔍 Analyzing transaction structure...');
-    
-    const analysis = {
-      signedTransactionLength: signedHex.length,
-      payloadLength: payloadHex.length,
-      callDataLength: callDataHex.length,
-      structure: {},
-      comparison: {}
-    };
+  // Direct sign and send transaction with v16 compatibility
+  async directSignAndSend(
+    accountAddress,
+    injector,
+    fileHash,
+    firstParty,
+    secondParty,
+    thirdParty,
+    contractName,
+    metadata,
+    options = {}
+  ) {
+    await this.connect();
 
-    // Check if call data is contained in signed transaction
-    analysis.comparison.callDataInSigned = signedHex.includes(callDataHex.slice(2)); // Remove 0x
-    analysis.comparison.payloadInSigned = signedHex.includes(payloadHex.slice(2));
+    try {
+      console.log('🚀 Creating and sending transaction directly using v16...');
 
-    // Analyze structure
-    if (signedHex.startsWith('0x')) {
-      const hex = signedHex.slice(2);
-      
-      // First 4 bytes are usually the version and transaction type
-      analysis.structure.version = '0x' + hex.slice(0, 8);
-      
-      // Next part is usually the signature and account info
-      analysis.structure.hasSignatureWrapper = hex.length > callDataHex.slice(2).length;
-      
-      // Calculate overhead (signature wrapper size)
-      analysis.structure.signatureOverhead = hex.length - callDataHex.slice(2).length;
-    }
+      const contractNameBytes = this._stringToU8Array(contractName);
+      const metadataBytes = this._stringToU8Array(metadata);
 
-    console.log('📊 Transaction analysis:', analysis);
-    return analysis;
-  }
+      // Create the transaction
+      const tx = this.api.tx.digitalNotarizedContract.initiateContract(
+        fileHash,
+        firstParty,
+        secondParty,
+        thirdParty,
+        contractNameBytes,
+        metadataBytes
+      );
 
-  // Compare with known working transaction from Polkadot Apps
-  compareWithWorkingTransaction(ourSignedHex, workingSignedHex) {
-    console.log('🔄 Comparing transactions...');
-    
-    const comparison = {
-      lengthMatch: ourSignedHex.length === workingSignedHex.length,
-      exactMatch: ourSignedHex === workingSignedHex,
-      ourLength: ourSignedHex.length,
-      workingLength: workingSignedHex.length,
-      differences: []
-    };
-
-    if (!comparison.exactMatch) {
-      // Find where they differ
-      const ourHex = ourSignedHex.slice(2);
-      const workingHex = workingSignedHex.slice(2);
-      
-      const minLength = Math.min(ourHex.length, workingHex.length);
-      
-      for (let i = 0; i < minLength; i += 2) {
-        const ourByte = ourHex.slice(i, i + 2);
-        const workingByte = workingHex.slice(i, i + 2);
-        
-        if (ourByte !== workingByte) {
-          comparison.differences.push({
-            position: i,
-            ours: ourByte,
-            working: workingByte,
-            description: this._describeBytePosition(i)
-          });
-          
-          // Only show first 10 differences to avoid spam
-          if (comparison.differences.length >= 10) {
-            comparison.differences.push({ description: '... and more differences' });
-            break;
-          }
-        }
+      // Get payment info before sending
+      let paymentInfo = null;
+      try {
+        paymentInfo = await tx.paymentInfo(accountAddress);
+        console.log('💰 Transaction fee:', paymentInfo.partialFee.toHuman());
+      } catch (feeError) {
+        console.warn('⚠️ Could not get fee estimate:', feeError.message);
       }
+
+      // V16: Direct sign and send with automatic TxExtension handling
+      return new Promise((resolve, reject) => {
+        let unsubscribe = null;
+        
+        const timeout = setTimeout(() => {
+          if (unsubscribe) unsubscribe();
+          reject(new Error('Transaction timeout after 3 minutes'));
+        }, 180000);
+
+        tx.signAndSend(
+          accountAddress,
+          { 
+            signer: injector.signer,
+            // V16 automatically handles all TxExtension parameters
+            nonce: options.nonce,
+            era: options.era,
+            tip: options.tip || 0
+          },
+          (result) => {
+            console.log(`📊 Transaction status: ${result.status.type}`);
+
+            if (result.txHash) {
+              console.log('📋 Transaction hash:', result.txHash.toHex());
+            }
+
+            if (result.status.isReady) {
+              console.log('📋 Transaction ready and submitted to network');
+            }
+
+            if (result.status.isBroadcast) {
+              console.log('📡 Transaction broadcast to network peers');
+            }
+
+            if (result.status.isInBlock) {
+              console.log('📦 Transaction included in block:', result.status.asInBlock.toHex());
+              
+              if (result.events && result.events.length > 0) {
+                console.log('📋 Block events:');
+                result.events.forEach(({ event, phase }) => {
+                  console.log(`  ${event.section}.${event.method}:`, event.data.toHuman());
+                });
+              }
+            }
+
+            // Handle finalization
+            if (result.status.isFinalized) {
+              clearTimeout(timeout);
+              if (unsubscribe) unsubscribe();
+              
+              console.log('🎉 Transaction finalized in block:', result.status.asFinalized.toHex());
+
+              if (result.dispatchError) {
+                console.error('💥 Transaction failed with dispatch error');
+                const error = this._parseDispatchError(result.dispatchError, this.api);
+                reject(error);
+                return;
+              }
+
+              // Extract contract creation events
+              const contractEvents = result.events.filter(({ event }) =>
+                event.section === 'digitalNotarizedContract' && 
+                event.method === 'ContractInitiated'
+              );
+
+              let contractId = null;
+              let eventData = null;
+              if (contractEvents.length > 0) {
+                eventData = contractEvents[0].event.data.toHuman();
+                contractId = eventData.contract_id || eventData.contractId || eventData[0];
+                console.log('📋 Contract successfully created with ID:', contractId);
+                console.log('📋 Contract event data:', eventData);
+              } else {
+                console.warn('⚠️ No ContractInitiated event found, but transaction succeeded');
+              }
+
+              resolve({
+                success: true,
+                blockHash: result.status.asFinalized.toHex(),
+                txHash: result.txHash.toHex(),
+                contractId,
+                eventData,
+                paymentInfo: paymentInfo ? {
+                  partialFee: paymentInfo.partialFee.toString(),
+                  weight: paymentInfo.weight.toString()
+                } : null,
+                allEvents: result.events.map(({ event, phase }) => ({
+                  phase: phase.toString(),
+                  section: event.section,
+                  method: event.method,
+                  data: event.data.toHuman()
+                }))
+              });
+            }
+
+            // Handle errors during processing
+            if (result.dispatchError) {
+              clearTimeout(timeout);
+              if (unsubscribe) unsubscribe();
+              
+              console.error('💥 Transaction dispatch error');
+              const error = this._parseDispatchError(result.dispatchError, this.api);
+              reject(error);
+            }
+          }
+        )
+        .then(unsub => {
+          unsubscribe = unsub;
+          console.log('📡 V16 transaction submitted successfully, waiting for confirmation...');
+        })
+        .catch(error => {
+          clearTimeout(timeout);
+          console.error('💥 V16 transaction submission failed:', error);
+          
+          if (error.message.includes('Cancelled')) {
+            reject(new Error('Transaction was cancelled by user'));
+          } else if (error.message.includes('1014')) {
+            reject(new Error('Transaction priority too low - network may be congested, please try again'));
+          } else if (error.message.includes('1010')) {
+            reject(new Error('Invalid transaction - please check your inputs and try again'));
+          } else if (error.message.includes('nonce')) {
+            reject(new Error('Nonce error - please refresh and try again'));
+          } else {
+            reject(new Error(`Transaction submission failed: ${error.message}`));
+          }
+        });
+      });
+
+    } catch (error) {
+      console.error('💥 V16 direct sign and send failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        stack: error.stack
+      };
     }
-
-    console.log('📋 Comparison result:', comparison);
-    return comparison;
   }
 
-  // Helper to describe what different byte positions might represent
-  _describeBytePosition(position) {
-    if (position < 8) return 'Transaction version/type';
-    if (position < 40) return 'Account address';
-    if (position < 104) return 'Signature data';
-    if (position < 120) return 'Transaction metadata';
-    return 'Call data';
+  // Send pre-signed transaction manually with v16 compatibility
+  async sendManualTransaction(signedTransactionHex) {
+    await this.connect();
+    
+    try {
+      console.log('📤 Sending pre-signed transaction manually using v16...');
+      console.log('📋 Transaction hex:', signedTransactionHex);
+      
+      // Validate hex format
+      if (!signedTransactionHex.startsWith('0x')) {
+        throw new Error('Transaction hex must start with 0x');
+      }
+      
+      if (signedTransactionHex.length < 100) {
+        throw new Error('Transaction hex seems too short to be valid');
+      }
+      
+      // Create extrinsic from hex
+      const extrinsic = this.api.createType('Extrinsic', signedTransactionHex);
+      
+      console.log('✅ V16 extrinsic created from hex successfully');
+      console.log('📊 Extrinsic info:', {
+        length: signedTransactionHex.length,
+        method: extrinsic.method.section + '.' + extrinsic.method.method,
+        isSigned: extrinsic.isSigned,
+        version: extrinsic.version
+      });
+      
+      // Submit the signed transaction with full monitoring
+      return new Promise((resolve, reject) => {
+        let unsubscribe = null;
+        
+        const timeout = setTimeout(() => {
+          if (unsubscribe) unsubscribe();
+          reject(new Error('Manual transaction timeout after 3 minutes'));
+        }, 180000);
+
+        this.api.rpc.author.submitAndWatchExtrinsic(extrinsic, (result) => {
+          console.log(`📊 Manual transaction status: ${result.status.type}`);
+
+          if (result.txHash) {
+            console.log('📋 Manual transaction hash:', result.txHash.toHex());
+          }
+
+          if (result.status.isReady) {
+            console.log('📋 Manual transaction ready and submitted to network');
+          }
+
+          if (result.status.isBroadcast) {
+            console.log('📡 Manual transaction broadcast to network peers');
+          }
+
+          if (result.status.isInBlock) {
+            console.log('📦 Manual transaction included in block:', result.status.asInBlock.toHex());
+            
+            if (result.events && result.events.length > 0) {
+              console.log('📋 Manual transaction block events:');
+              result.events.forEach(({ event, phase }) => {
+                console.log(`  ${event.section}.${event.method}:`, event.data.toHuman());
+              });
+            }
+          }
+
+          // Handle finalization
+          if (result.status.isFinalized) {
+            clearTimeout(timeout);
+            if (unsubscribe) unsubscribe();
+            
+            console.log('🎉 Manual transaction finalized in block:', result.status.asFinalized.toHex());
+
+            if (result.dispatchError) {
+              console.error('💥 Manual transaction failed with dispatch error');
+              const error = this._parseDispatchError(result.dispatchError, this.api);
+              reject(error);
+              return;
+            }
+
+            // Extract contract creation events
+            const contractEvents = result.events.filter(({ event }) =>
+              event.section === 'digitalNotarizedContract' && 
+              event.method === 'ContractInitiated'
+            );
+
+            let contractId = null;
+            let eventData = null;
+            if (contractEvents.length > 0) {
+              eventData = contractEvents[0].event.data.toHuman();
+              contractId = eventData.contract_id || eventData.contractId || eventData[0];
+              console.log('📋 Manual transaction: Contract successfully created with ID:', contractId);
+              console.log('📋 Manual transaction: Contract event data:', eventData);
+            } else {
+              console.warn('⚠️ Manual transaction: No ContractInitiated event found, but transaction succeeded');
+            }
+
+            resolve({
+              success: true,
+              blockHash: result.status.asFinalized.toHex(),
+              txHash: result.txHash.toHex(),
+              contractId,
+              eventData,
+              originalHex: signedTransactionHex,
+              allEvents: result.events.map(({ event, phase }) => ({
+                phase: phase.toString(),
+                section: event.section,
+                method: event.method,
+                data: event.data.toHuman()
+              }))
+            });
+          }
+
+          // Handle errors during processing
+          if (result.dispatchError) {
+            clearTimeout(timeout);
+            if (unsubscribe) unsubscribe();
+            
+            console.error('💥 Manual transaction dispatch error');
+            const error = this._parseDispatchError(result.dispatchError, this.api);
+            reject(error);
+          }
+        })
+        .then(unsub => {
+          unsubscribe = unsub;
+          console.log('📡 V16 manual transaction submitted successfully, waiting for confirmation...');
+        })
+        .catch(error => {
+          clearTimeout(timeout);
+          console.error('💥 V16 manual transaction submission failed:', error);
+          
+          if (error.message.includes('1002') && error.message.includes('WASM')) {
+            reject(new Error('WASM execution failed - likely transaction format incompatibility'));
+          } else if (error.message.includes('1010')) {
+            reject(new Error('Invalid transaction - check transaction encoding'));
+          } else if (error.message.includes('1014')) {
+            reject(new Error('Transaction priority too low - network may be congested'));
+          } else {
+            reject(new Error(`Manual transaction submission failed: ${error.message}`));
+          }
+        });
+      });
+      
+    } catch (error) {
+      console.error('💥 V16 manual transaction send failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        originalHex: signedTransactionHex
+      };
+    }
   }
 
-  // Test with exact parameters from your working Polkadot Apps transaction
+  // Test with exact parameters using v16 signAsync method
   async testWithWorkingParameters(accountAddress, injector) {
-    console.log('🧪 Testing with exact working parameters...');
+    console.log('🧪 Testing with exact working parameters using v16 signAsync...');
     
     const workingParams = {
-      fileHash: '0x65f61c36aa4608d0d7c4b46afcf8c57edc92210dddd533a7e42a6788cd06edea',
-      firstParty: 'd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d',
-      secondParty: '8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48',
-      thirdParty: '90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22',
+      fileHash: '0x075ad2e301245c13c580ed83c9c6b6b07b25c8bd33895d2f43b275c48fa2f4e1',
+      firstParty: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+      secondParty: '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+      thirdParty: '5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc',
       contractName: 'Sanjaya',
       metadata: 'Sanjaya'
     };
@@ -299,10 +519,10 @@ class TransactionDebugService {
       workingParams.metadata
     );
 
-    console.log('📝 Unsigned transaction created:', unsignedResult.callData);
+    console.log('📝 V16 unsigned transaction created:', unsignedResult.callData);
 
-    // Now create signed transaction
-    const signedResult = await this.createSignedTransaction(
+    // Create signed transaction using v16 signAsync method
+    const signedResult = await this.createSignedTransactionV2(
       accountAddress,
       injector,
       workingParams.fileHash,
@@ -367,6 +587,81 @@ class TransactionDebugService {
         success: false,
         error: error.message
       };
+    }
+  }
+
+  // Analyze signed transaction structure
+  _analyzeSignedTransaction(signedHex, payloadHex, callDataHex) {
+    console.log('🔍 Analyzing v16 transaction structure...');
+    
+    const analysis = {
+      signedTransactionLength: signedHex.length,
+      payloadLength: payloadHex ? payloadHex.length : 'N/A',
+      callDataLength: callDataHex.length,
+      structure: {},
+      comparison: {}
+    };
+
+    // Check if call data is contained in signed transaction
+    analysis.comparison.callDataInSigned = signedHex.includes(callDataHex.slice(2)); // Remove 0x
+    if (payloadHex) {
+      analysis.comparison.payloadInSigned = signedHex.includes(payloadHex.slice(2));
+    }
+
+    // Analyze structure
+    if (signedHex.startsWith('0x')) {
+      const hex = signedHex.slice(2);
+      
+      // First bytes are transaction format and version
+      analysis.structure.version = '0x' + hex.slice(0, 8);
+      
+      // Check if this is the new TxExtension format
+      const versionByte = hex.slice(2, 4);
+      analysis.structure.isTxExtensionFormat = versionByte === 'e9' || versionByte === 'e5';
+      analysis.structure.formatType = versionByte === 'e9' ? 'TxExtension (0xe9)' : 
+                                     versionByte === 'e5' ? 'Legacy (0xe5)' : 'Unknown';
+      
+      analysis.structure.hasSignatureWrapper = hex.length > callDataHex.slice(2).length;
+      analysis.structure.signatureOverhead = hex.length - callDataHex.slice(2).length;
+    }
+
+    console.log('📊 V16 transaction analysis:', analysis);
+    return analysis;
+  }
+
+  // Parse dispatch errors with detailed information
+  _parseDispatchError(dispatchError, api) {
+    if (dispatchError.isModule) {
+      try {
+        const decoded = api.registry.findMetaError(dispatchError.asModule);
+        const errorMessage = `Pallet Error: ${decoded.section}.${decoded.name} - ${decoded.docs.join(' ')}`;
+        console.error('🚨 Module Error Details:', {
+          section: decoded.section,
+          name: decoded.name,
+          docs: decoded.docs,
+          raw: dispatchError.toString()
+        });
+        return new Error(errorMessage);
+      } catch (decodeError) {
+        console.error('🚨 Could not decode module error:', dispatchError.toString());
+        return new Error(`Module error (decode failed): ${dispatchError.toString()}`);
+      }
+    } else if (dispatchError.isToken) {
+      const errorMessage = `Token error: ${dispatchError.asToken.toString()}`;
+      console.error('🚨 Token Error:', errorMessage);
+      return new Error(errorMessage);
+    } else if (dispatchError.isArithmetic) {
+      const errorMessage = `Arithmetic error: ${dispatchError.asArithmetic.toString()}`;
+      console.error('🚨 Arithmetic Error:', errorMessage);
+      return new Error(errorMessage);
+    } else if (dispatchError.isTransactional) {
+      const errorMessage = `Transactional error: ${dispatchError.asTransactional.toString()}`;
+      console.error('🚨 Transactional Error:', errorMessage);
+      return new Error(errorMessage);
+    } else {
+      const errorMessage = `Unknown dispatch error: ${dispatchError.toString()}`;
+      console.error('🚨 Unknown Dispatch Error:', errorMessage);
+      return new Error(errorMessage);
     }
   }
 
