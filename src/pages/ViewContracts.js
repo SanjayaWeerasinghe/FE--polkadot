@@ -1,290 +1,115 @@
-import React, { useState } from 'react';
+// ViewContracts.js - Perfect UI with Working Functions
+
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
-import { useBlockchain } from '../hooks/useBlockchain';
-import { InlineSpinner } from '../components/LoadingSpinner';
-
-// Contract Card Component
-const ContractCard = ({ contract, userAddress, onSign, onDeactivate, actionLoading }) => {
-  const isFirstParty = contract.firstParty === userAddress;
-  const isSecondParty = contract.secondParty === userAddress;
-  const isThirdParty = contract.thirdParty === userAddress;
-  
-  const canSign = (
-    (isFirstParty && contract.status === 'Initiated') ||
-    (isSecondParty && contract.status === 'FirstPartySigned')
-  ) && !['BothPartiesSigned', 'Completed', 'Deactivated'].includes(contract.status);
-  
-  // Can deactivate if you're the initiator and contract is not completed/deactivated
-  // Also allow deactivation for non-active contracts (Initiated, FirstPartySigned)
-  const canDeactivate = contract.initiator === userAddress && 
-    ['Initiated', 'FirstPartySigned'].includes(contract.status);
-
-  const getStatusColor = (status) => {
-    const colors = {
-      'Initiated': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      'FirstPartySigned': 'bg-blue-100 text-blue-800 border-blue-300',
-      'BothPartiesSigned': 'bg-green-100 text-green-800 border-green-300',
-      'Completed': 'bg-gray-100 text-gray-800 border-gray-300',
-      'Deactivated': 'bg-red-100 text-red-800 border-red-300'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800 border-gray-300';
-  };
-
-  const formatAddress = (address) => {
-    if (!address) return '';
-    return `${address.slice(0, 8)}...${address.slice(-8)}`;
-  };
-
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return 'Unknown';
-    try {
-      // Remove commas from timestamp string and convert to number
-      const cleanTimestamp = timestamp.toString().replace(/,/g, '');
-      const date = new Date(parseInt(cleanTimestamp) * 1000);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-    } catch (error) {
-      return 'Invalid date';
-    }
-  };
-
-  const getUserRole = () => {
-    if (isFirstParty) return 'First Party';
-    if (isSecondParty) return 'Second Party';
-    if (isThirdParty) return 'Third Party';
-    return 'Observer';
-  };
-
-  const getStatusDisplay = (status) => {
-    const statusMap = {
-      'Initiated': 'Initiated',
-      'FirstPartySigned': 'First Party Signed',
-      'BothPartiesSigned': 'Both Parties Signed (Active)',
-      'Completed': 'Completed',
-      'Deactivated': 'Deactivated'
-    };
-    return statusMap[status] || status;
-  };
-
-  return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
-      {/* Header with Contract Name and Status */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-xl font-bold text-gray-800">
-              {contract.contractName || `Contract #${contract.contractId}`}
-            </h3>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(contract.status)}`}>
-              {getStatusDisplay(contract.status)}
-            </span>
-          </div>
-          <div className="text-sm text-gray-500">
-            Contract ID: <span className="font-mono">{contract.contractId}</span>
-          </div>
-        </div>
-        
-        {/* Your Role Badge */}
-        <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">
-          You: {getUserRole()}
-        </div>
-      </div>
-
-      {/* File Hash */}
-      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-        <div className="text-sm font-semibold text-gray-700 mb-1">📄 File Hash</div>
-        <div className="font-mono text-xs text-gray-600 break-all">
-          {contract.fileHash}
-        </div>
-      </div>
-
-      {/* Contract Parties */}
-      <div className="space-y-3 mb-4">
-        <h4 className="font-semibold text-gray-800">👥 Contract Parties</h4>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-          <div className="p-3 bg-blue-50 rounded-lg">
-            <div className="font-semibold text-blue-800 mb-1">First Party</div>
-            <div className="font-mono text-blue-700 text-xs mb-1">
-              {formatAddress(contract.firstParty)}
-            </div>
-            {isFirstParty && (
-              <div className="text-blue-600 font-semibold text-xs">👤 This is YOU</div>
-            )}
-          </div>
-          
-          <div className="p-3 bg-green-50 rounded-lg">
-            <div className="font-semibold text-green-800 mb-1">Second Party</div>
-            <div className="font-mono text-green-700 text-xs mb-1">
-              {formatAddress(contract.secondParty)}
-            </div>
-            {isSecondParty && (
-              <div className="text-green-600 font-semibold text-xs">👤 This is YOU</div>
-            )}
-          </div>
-          
-          <div className="p-3 bg-purple-50 rounded-lg">
-            <div className="font-semibold text-purple-800 mb-1">Third Party (Notary)</div>
-            <div className="font-mono text-purple-700 text-xs mb-1">
-              {formatAddress(contract.thirdParty)}
-            </div>
-            {isThirdParty && (
-              <div className="text-purple-600 font-semibold text-xs">👤 This is YOU</div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Contract Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
-        <div className="p-3 bg-blue-50 rounded-lg">
-          <div className="font-semibold text-blue-800 mb-1">Created</div>
-          <div className="text-blue-700">{formatTimestamp(contract.createdAt)}</div>
-          <div className="text-xs text-blue-600 mt-1">Block: {contract.createdBlock}</div>
-        </div>
-        
-        <div className="p-3 bg-green-50 rounded-lg">
-          <div className="font-semibold text-green-800 mb-1">Signatures</div>
-          <div className="text-green-700">{contract.signatures?.length || 0} of 2 signed</div>
-          <div className="text-xs text-green-600 mt-1">
-            {contract.signatures?.map(sig => formatAddress(sig.signer)).join(', ')}
-          </div>
-        </div>
-      </div>
-
-      {/* Metadata */}
-      {contract.metadata && contract.metadata !== contract.contractName && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <div className="text-sm font-semibold text-gray-700 mb-1">📝 Metadata</div>
-          <div className="text-sm text-gray-600">{contract.metadata}</div>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      {(canSign || canDeactivate) && (
-        <div className="flex gap-3 pt-4 border-t border-gray-100">
-          {canSign && (
-            <button
-              onClick={() => onSign(contract.fileHash)}
-              disabled={actionLoading === contract.fileHash}
-              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {actionLoading === contract.fileHash ? (
-                <span className="flex items-center justify-center gap-2">
-                  <InlineSpinner className="w-4 h-4" />
-                  Signing...
-                </span>
-              ) : (
-                '✍️ Sign Contract'
-              )}
-            </button>
-          )}
-          {canDeactivate && (
-            <button
-              onClick={() => onDeactivate(contract.fileHash)}
-              disabled={actionLoading === contract.fileHash}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {actionLoading === contract.fileHash ? (
-                <span className="flex items-center justify-center gap-2">
-                  <InlineSpinner className="w-4 h-4" />
-                  Deactivating...
-                </span>
-              ) : (
-                '🗑️ Deactivate'
-              )}
-            </button>
-          )}
-        </div>
-      )}
-      
-      {/* Info message for different contract states */}
-      {contract.status === 'BothPartiesSigned' && (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <div className="text-sm text-green-800">
-            ✅ <strong>Contract Active:</strong> Both parties have signed this contract successfully.
-          </div>
-        </div>
-      )}
-      
-      {contract.status === 'Initiated' && isFirstParty && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="text-sm text-yellow-800">
-            ⏳ <strong>Waiting for Second Party:</strong> You initiated this contract. Waiting for the second party to sign.
-          </div>
-        </div>
-      )}
-      
-      {contract.status === 'FirstPartySigned' && isSecondParty && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="text-sm text-blue-800">
-            ✍️ <strong>Ready to Sign:</strong> The first party has signed. You can now sign this contract.
-          </div>
-        </div>
-      )}
-      
-      {contract.status === 'Deactivated' && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <div className="text-sm text-red-800">
-            ❌ <strong>Contract Deactivated:</strong> This contract has been cancelled and is no longer active.
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+import { useBlockchain as useBlockchainHook } from '../hooks/useBlockchain'; // Your ORIGINAL hook
+import ModernContractCard from '../components/ContractCard';
+import { LoadingCard, EmptyState } from '../components/LoadingStates';
+import fileDownloadService from '../services/fileDownloadService';
 
 const ViewContracts = ({ onBack, onStatus }) => {
   const { account, getInjector, signMessage } = useWallet();
-  const { getContracts, signContract, deactivateContract } = useBlockchain();
+  const { 
+    getContracts,           // Your ORIGINAL hook functions
+    signContract,           
+    deactivateContract,     
+    loading: hookLoading,
+    error
+  } = useBlockchainHook();
   
-  const [loading, setLoading] = useState(false);
   const [contracts, setContracts] = useState([]);
   const [actionLoading, setActionLoading] = useState(null);
+  const [filter, setFilter] = useState('all');
+  const [expandedCard, setExpandedCard] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Load contracts from blockchain using connected account
+  // Load contracts from blockchain using connected account - CALLED ON COMPONENT MOUNT
   const loadContracts = async () => {
-    if (!account) {
+    console.log('🚀 loadContracts called');
+    
+    if (!account || !account.address) {
+      console.log('❌ No account or address found');
       onStatus('Please connect your wallet first', 'error');
       return;
     }
+
+    console.log('📝 Account found:', account.address);
+    console.log('🔧 getContracts function:', typeof getContracts);
 
     setLoading(true);
     try {
       onStatus(`🔄 Loading contracts for ${account.meta?.name || 'your account'}...`, 'info');
       
-      console.log('📊 Fetching contracts for account:', account.address);
+      console.log('📊 Calling getContracts for account:', account.address);
       
-      // Use the blockchain hook to get real contracts
+      // Use your ORIGINAL hook function
       const contractsData = await getContracts(account.address);
       
-      console.log('📋 Retrieved contracts:', contractsData);
+      console.log('📋 Retrieved contracts data:', contractsData);
+      console.log('📊 Contracts data type:', typeof contractsData);
+      console.log('📈 Contracts data length:', contractsData?.length);
+      
+      if (contractsData) {
+        console.log('📄 First contract sample:', contractsData[0]);
+      }
       
       setContracts(contractsData || []);
-      onStatus(`✅ Loaded ${contractsData?.length || 0} contracts`, 'success');
+      
+      if (contractsData?.length > 0) {
+        onStatus(`✅ Loaded ${contractsData.length} contracts`, 'success');
+      } else {
+        console.log('📭 No contracts found');
+        onStatus('No contracts found for this account', 'info');
+      }
       
     } catch (error) {
-      console.error('Load contracts error:', error);
+      console.error('❌ Load contracts error:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       onStatus(`❌ Error loading contracts: ${error.message}`, 'error');
       setContracts([]);
     } finally {
       setLoading(false);
+      console.log('🏁 loadContracts finished');
     }
   };
 
-  // Quick sign contract
-  const handleQuickSign = async (contractHash) => {
-    if (!account) {
+  // Load contracts when component mounts and account is available
+  useEffect(() => {
+    console.log('🔍 ViewContracts useEffect triggered:', { 
+      account: account?.address, 
+      hasGetContracts: !!getContracts 
+    });
+    
+    if (account && account.address) {
+      console.log('✅ Account found, calling loadContracts...');
+      loadContracts();
+    } else {
+      console.log('❌ No account or address:', { 
+        hasAccount: !!account, 
+        accountAddress: account?.address 
+      });
+    }
+  }, [account]);
+
+  // Sign contract - USING YOUR WORKING FUNCTION
+  const handleSign = async (fileHash) => {
+    if (!account || !account.address) {
       onStatus('Please ensure wallet is connected', 'error');
       return;
     }
 
-    setActionLoading(contractHash);
+    setActionLoading(fileHash);
     try {
       onStatus('🔄 Preparing to sign contract...', 'info');
 
       // Sign the contract hash with wallet
       onStatus('🔄 Please sign the document hash in your wallet...', 'info');
-      const signatureResult = await signMessage(contractHash);
+      const signatureResult = await signMessage(fileHash);
 
       onStatus('🔄 Creating transaction...', 'info');
 
@@ -293,8 +118,8 @@ const ViewContracts = ({ onBack, onStatus }) => {
 
       onStatus('🔄 Please sign the transaction in your wallet...', 'info');
 
-      // Use the blockchain hook to sign the contract
-      await signContract(injector, account.address, contractHash, signatureResult.signature);
+      // Use your ORIGINAL hook function
+      await signContract(injector, account.address, fileHash, signatureResult.signature);
 
       onStatus('🎉 Contract signed successfully!', 'success');
       
@@ -304,7 +129,7 @@ const ViewContracts = ({ onBack, onStatus }) => {
       }, 2000);
 
     } catch (error) {
-      console.error('Quick sign error:', error);
+      console.error('Sign error:', error);
       if (error.message.includes('Cancelled')) {
         onStatus('❌ Signing cancelled by user', 'error');
       } else if (error.message.includes('NotAuthorized')) {
@@ -319,18 +144,21 @@ const ViewContracts = ({ onBack, onStatus }) => {
     }
   };
 
-  // Deactivate contract
-  const handleDeactivate = async (contractHash) => {
-    if (!window.confirm('Are you sure you want to deactivate this contract? This action cannot be undone.')) {
-      return;
-    }
-
-    if (!account) {
+  // Deactivate contract - USING YOUR WORKING FUNCTION
+  const handleDeactivate = async (fileHash) => {
+    if (!account || !account.address) {
       onStatus('Please ensure wallet is connected', 'error');
       return;
     }
 
-    setActionLoading(contractHash);
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      'Are you sure you want to deactivate this contract? This action cannot be undone.'
+    );
+    
+    if (!confirmed) return;
+
+    setActionLoading(fileHash);
     try {
       onStatus('🔄 Preparing to deactivate contract...', 'info');
 
@@ -339,10 +167,15 @@ const ViewContracts = ({ onBack, onStatus }) => {
 
       onStatus('🔄 Please confirm the deactivation transaction in your wallet...', 'info');
 
-      // Use the blockchain hook to deactivate the contract
-      await deactivateContract(injector, account.address, contractHash, 'User requested deactivation');
+      // Use your ORIGINAL hook function
+      await deactivateContract(
+        injector, 
+        account.address, 
+        fileHash, 
+        'User requested deactivation'
+      );
 
-      onStatus('✅ Contract deactivated successfully!', 'success');
+      onStatus('🎉 Contract deactivated successfully!', 'success');
       
       // Reload contracts after a delay
       setTimeout(() => {
@@ -365,122 +198,198 @@ const ViewContracts = ({ onBack, onStatus }) => {
     }
   };
 
+  const handleDownload = async (contractId) => {
+    if (!contractId) {
+      onStatus('❌ Contract ID not available', 'error');
+      return;
+    }
+
+    const downloadKey = `download-${contractId}`;
+    setActionLoading(downloadKey);
+    
+    try {
+      onStatus('📥 Starting file download...', 'info');
+      
+      await fileDownloadService.downloadFileByContractId(
+        contractId,
+        (progress, loaded, total) => {
+          const progressText = fileDownloadService.formatDownloadProgress(progress, loaded, total);
+          onStatus(`📥 Downloading... ${progressText}`, 'info');
+        }
+      );
+      
+      onStatus('✅ File downloaded successfully!', 'success');
+      
+    } catch (error) {
+      console.error('❌ Download error:', error);
+      
+      if (error.message.includes('No files found')) {
+        onStatus('❌ No contract file found for download', 'error');
+      } else if (error.message.includes('Network error')) {
+        onStatus('❌ Network error during download. Please try again.', 'error');
+      } else {
+        onStatus(`❌ Download failed: ${error.message}`, 'error');
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCardToggle = (contractId) => {
+    setExpandedCard(expandedCard === contractId ? null : contractId);
+  };
+
+  const handleRefresh = () => {
+    console.log('🔄 Refresh button clicked');
+    console.log('🔍 Current state:', { 
+      hasAccount: !!account, 
+      loading,
+      accountAddress: account?.address 
+    });
+    
+    if (account && account.address) {
+      console.log('✅ Calling loadContracts from refresh...');
+      loadContracts();
+    } else {
+      console.log('❌ Cannot refresh - no account or address');
+      onStatus('Please connect your wallet first', 'error');
+    }
+  };
+
+  // Filter contracts
+  const filteredContracts = contracts.filter(contract => {
+    if (filter === 'all') return true;
+    if (filter === 'pending') return !['BothPartiesSigned', 'Completed', 'Deactivated'].includes(contract.status);
+    if (filter === 'completed') return ['BothPartiesSigned', 'Completed'].includes(contract.status);
+    if (filter === 'deactivated') return contract.status === 'Deactivated';
+    return true;
+  });
+
+  const filterOptions = [
+    { key: 'all', label: 'All', count: contracts.length },
+    { 
+      key: 'pending', 
+      label: 'Pending', 
+      count: contracts.filter(c => !['BothPartiesSigned', 'Completed', 'Deactivated'].includes(c.status)).length 
+    },
+    { 
+      key: 'completed', 
+      label: 'Completed', 
+      count: contracts.filter(c => ['BothPartiesSigned', 'Completed'].includes(c.status)).length 
+    },
+    { 
+      key: 'deactivated', 
+      label: 'Deactivated', 
+      count: contracts.filter(c => c.status === 'Deactivated').length 
+    }
+  ];
+
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-8 shadow-glass-lg border border-white/20 animate-fadeInUp">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-gray-100">
-        <button
-          onClick={onBack}
-          disabled={loading || actionLoading}
-          className="bg-blue-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          ← Back
-        </button>
-        <h2 className="text-3xl font-bold text-gray-800">📊 Your Contracts</h2>
-      </div>
-
-      {/* Account Info */}
-      {account && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">👤 Connected Account</h3>
-          <div className="text-sm text-gray-700 space-y-1">
-            <p>• Name: <span className="font-medium">{account.meta?.name || 'Unknown'}</span></p>
-            <p>• Address: <span className="font-mono text-xs">{account.address}</span></p>
-            <p>• Loading all contracts where you are involved as any party</p>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onBack}
+            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">My Contracts</h1>
+            <p className="text-gray-600">Manage and track your digital contracts</p>
           </div>
         </div>
-      )}
 
-      {/* Load Button */}
-      <div className="mb-8">
-        <button
-          onClick={loadContracts}
-          disabled={loading || actionLoading || !account}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none btn-hover-lift"
-        >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <InlineSpinner />
-              Loading Contracts from Blockchain...
-            </span>
-          ) : (
-            '📋 Load My Contracts'
-          )}
-        </button>
-      </div>
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-3">
+          {/* Refresh Button */}
+          <button
+            onClick={handleRefresh}
+            disabled={loading || !account || !account.address}
+            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
 
-      {/* Contracts Summary */}
-      {contracts.length > 0 && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
-          <h3 className="font-semibold text-green-800 mb-2">📈 Contracts Summary</h3>
-          <div className="text-sm text-green-700">
-            Found {contracts.length} contracts where you are involved as a party.
+          {/* Filter Buttons */}
+          <div className="flex space-x-2">
+            {filterOptions.map(filterOption => (
+              <button
+                key={filterOption.key}
+                onClick={() => setFilter(filterOption.key)}
+                className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                  filter === filterOption.key
+                    ? filterOption.key === 'deactivated'
+                      ? 'bg-red-100 text-red-700 border border-red-200'
+                      : filterOption.key === 'completed'
+                      ? 'bg-green-100 text-green-700 border border-green-200'
+                      : filterOption.key === 'pending'
+                      ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                      : 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {filterOption.label} ({filterOption.count})
+              </button>
+            ))}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Contracts List */}
-      {contracts.length === 0 && !loading ? (
-        <div className="text-center py-16 text-gray-600">
-          <div className="text-6xl mb-4">📋</div>
-          <h3 className="text-2xl font-semibold mb-3 text-gray-800">No Contracts Found</h3>
-          <p className="text-lg leading-relaxed">
-            You haven't participated in any contracts yet.
-            <br />
-            <span className="text-sm text-gray-500 mt-2 block">
-              Click "Load My Contracts" to refresh, or create a new contract to get started.
-            </span>
-          </p>
-        </div>
+      {/* Content */}
+      {loading ? (
+        <LoadingCard count={3} />
+      ) : !account || !account.address ? (
+        <EmptyState
+          icon={FileText}
+          title="Wallet Not Connected"
+          description="Please connect your wallet to view your contracts."
+          action={() => onBack()}
+          actionText="Go to Dashboard"
+        />
+      ) : filteredContracts.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="No contracts found"
+          description={
+            filter === 'all' 
+              ? "You don't have any contracts yet. Create your first contract to get started."
+              : filter === 'pending'
+              ? "No pending contracts. All your contracts are either completed or deactivated."
+              : filter === 'completed'
+              ? "No completed contracts yet. Sign your pending contracts to complete them."
+              : filter === 'deactivated'
+              ? "No deactivated contracts. This shows contracts that have been cancelled or removed."
+              : `No contracts match the ${filter} filter.`
+          }
+          action={filter === 'all' ? () => onBack() : undefined}
+          actionText="Create Contract"
+        />
       ) : (
-        <div className="space-y-6">
-          {contracts.map((contract) => (
-            <ContractCard
-              key={contract.contractId}
+        <div className="space-y-4">
+          {filteredContracts.map((contract) => (
+            <ModernContractCard
+              key={contract.fileHash || contract.id}
               contract={contract}
               userAddress={account?.address}
-              onSign={handleQuickSign}
+              onSign={handleSign}
               onDeactivate={handleDeactivate}
+              onDownload={handleDownload}
               actionLoading={actionLoading}
+              isExpanded={expandedCard === (contract.fileHash || contract.id)}
+              onToggle={() => handleCardToggle(contract.fileHash || contract.id)}
             />
           ))}
         </div>
       )}
 
-      {/* Info Box */}
-      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl">
-        <h4 className="font-semibold text-gray-800 mb-3">📋 Contract Status Guide</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-full text-xs font-semibold">Initiated</span>
-              <span className="text-gray-600">Waiting for signatures</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 border border-blue-300 rounded-full text-xs font-semibold">First Party Signed</span>
-              <span className="text-gray-600">Second party can sign</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-green-100 text-green-800 border border-green-300 rounded-full text-xs font-semibold">Both Parties Signed</span>
-              <span className="text-gray-600">Active contract</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-gray-100 text-gray-800 border border-gray-300 rounded-full text-xs font-semibold">Completed</span>
-              <span className="text-gray-600">Finished</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-red-100 text-red-800 border border-red-300 rounded-full text-xs font-semibold">Deactivated</span>
-              <span className="text-gray-600">Cancelled</span>
-            </div>
-          </div>
+      {/* Show error if any */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+          <p className="text-red-800 font-medium">Error: {error}</p>
         </div>
-        <div className="text-xs text-gray-600 bg-blue-100 p-3 rounded-lg">
-          💡 <strong>Note:</strong> This page loads real contract data from the blockchain. 
-          You can sign contracts where you are the second party and the first party has already signed.
-        </div>
-      </div>
+      )}
     </div>
   );
 };
