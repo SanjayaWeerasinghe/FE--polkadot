@@ -8,9 +8,15 @@ const ModernContractForm = ({
   onSubmit, 
   account, 
   loading = false,
-  initialData = {}
+  initialData = {},
+  onFileValidate = null // Optional file validation function
 }) => {
   const [fileInfo, setFileInfo] = useState(null);
+  const [fileValidationState, setFileValidationState] = useState({
+    validating: false,
+    error: null,
+    exists: false
+  });
   const [formData, setFormData] = useState({
     contractName: '',
     firstParty: account?.address || '',
@@ -54,6 +60,53 @@ const ModernContractForm = ({
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
+  // Handle file selection with validation
+  const handleFileSelect = async (file) => {
+    setFileInfo(file);
+    setFileValidationState({ validating: false, error: null, exists: false });
+
+    // If no validation function provided, just set the file
+    if (!onFileValidate || !file?.hash) {
+      return;
+    }
+
+    // Start validation
+    setFileValidationState(prev => ({ ...prev, validating: true }));
+    
+    try {
+      console.log('🔍 Validating file with hash:', file.hash);
+      const validationResult = await onFileValidate(file.hash);
+      
+      if (validationResult && validationResult.exists) {
+        const contractName = validationResult.contract?.contractName || validationResult.contract?.name || 'Unknown Contract';
+        setFileValidationState({
+          validating: false,
+          error: `Contract already exists: "${contractName}"`,
+          exists: true
+        });
+        setErrors(prev => ({ ...prev, file: `This file is already used in contract "${contractName}"` }));
+      } else {
+        setFileValidationState({
+          validating: false,
+          error: null,
+          exists: false
+        });
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.file;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error('❌ File validation error:', error);
+      setFileValidationState({
+        validating: false,
+        error: `Validation failed: ${error.message}`,
+        exists: false
+      });
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
     Object.keys(formData).forEach(key => {
@@ -63,6 +116,8 @@ const ModernContractForm = ({
     
     if (!fileInfo) {
       newErrors.file = 'Please upload a contract document';
+    } else if (fileValidationState.exists) {
+      newErrors.file = fileValidationState.error;
     }
     
     setErrors(newErrors);
@@ -94,7 +149,9 @@ const ModernContractForm = ({
                      fileInfo && 
                      formData.contractName &&
                      formData.secondParty &&
-                     formData.thirdParty;
+                     formData.thirdParty &&
+                     !fileValidationState.validating &&  // Don't allow submit during validation
+                     !fileValidationState.exists;        // Don't allow submit if file exists
 
   const formatAddress = (address) => {
     if (!address) return '';
@@ -306,14 +363,42 @@ const ModernContractForm = ({
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <ModernFileUpload
-              onFileSelect={setFileInfo}
+              onFileSelect={handleFileSelect}
               fileInfo={fileInfo}
-              disabled={loading}
+              disabled={loading || fileValidationState.validating}
               accept=".pdf,.doc,.docx,.txt"
               maxSize={10 * 1024 * 1024}
               title="Contract Document"
               description="Upload your contract document"
             />
+            
+            {/* File validation feedback */}
+            {fileValidationState.validating && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-blue-700">Checking if file already exists on blockchain...</span>
+                </div>
+              </div>
+            )}
+            
+            {fileValidationState.error && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                  <span className="text-sm text-red-700">{fileValidationState.error}</span>
+                </div>
+              </div>
+            )}
+            
+            {fileInfo && !fileValidationState.validating && !fileValidationState.error && (
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-sm text-green-700">✅ File is unique and ready for contract creation</span>
+                </div>
+              </div>
+            )}
             {errors.file && (
               <div className="flex items-center space-x-2 mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
                 <AlertCircle className="w-4 h-4 text-red-500" />

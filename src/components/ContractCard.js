@@ -155,8 +155,9 @@ const ModernContractCard = ({
             </div>
           </div>
           
-          {/* Progress Circle */}
-          <div className="flex flex-col items-center">
+          {/* Top Right Actions */}
+          <div className="flex flex-col items-end space-y-3">
+            {/* Progress Circle */}
             <div className="relative w-16 h-16">
               <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 64 64">
                 <circle
@@ -185,68 +186,12 @@ const ModernContractCard = ({
               </div>
             </div>
             <span className="text-xs text-gray-500 mt-1">Signatures</span>
+            </div>
           </div>
-        </div>
 
         {/* Status Description */}
         <p className="text-sm text-gray-600 mb-4">{statusConfig.description}</p>
 
-        {/* Quick Actions */}
-        <div className="space-y-3">
-          {/* Primary Actions Row */}
-          {(canSign || canDeactivate) && (
-            <div className="flex space-x-3">
-              {canSign && (
-                <button
-                  onClick={() => onSign && onSign(contract.fileHash)}
-                  disabled={actionLoading === contract.fileHash}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
-                >
-                  {actionLoading === contract.fileHash ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Signing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <PenTool className="w-4 h-4" />
-                      <span>Sign Contract</span>
-                    </>
-                  )}
-                </button>
-              )}
-              
-              {canDeactivate && (
-                <button
-                  onClick={() => onDeactivate && onDeactivate(contract.fileHash)}
-                  disabled={actionLoading === contract.fileHash}
-                  className="px-4 py-2 bg-red-100 text-red-700 rounded-xl font-medium hover:bg-red-200 transition-colors text-sm border border-red-300 disabled:opacity-50"
-                >
-                  Deactivate
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Download Button - Always available */}
-          <button
-            onClick={() => onDownload && onDownload(contract.contractId)}
-            disabled={actionLoading === `download-${contract.contractId}`}
-            className="w-full bg-green-100 text-green-700 px-4 py-2 rounded-xl font-medium hover:bg-green-200 transition-all duration-200 flex items-center justify-center space-x-2 border border-green-300 disabled:opacity-50"
-          >
-            {actionLoading === `download-${contract.contractId}` ? (
-              <>
-                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
-                <span>Downloading...</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                <span>Download Contract File</span>
-              </>
-            )}
-          </button>
-        </div>
 
         {/* Expand/Collapse Button */}
         <button
@@ -264,9 +209,21 @@ const ModernContractCard = ({
         </button>
       </div>
 
-      {/* Expanded Details */}
       {isExpanded && (
-        <div className="p-6 bg-gray-50 space-y-6">
+        <div className="relative p-6 bg-gray-50 space-y-6">
+          {/* Download Icon - Top Right */}
+          <button
+            onClick={() => onDownload && onDownload(contract.contractId)}
+            disabled={actionLoading === `download-${contract.contractId}`}
+            className="absolute top-4 right-4 w-10 h-10 bg-green-100 text-green-600 rounded-xl hover:bg-green-200 transition-colors flex items-center justify-center border border-green-200 disabled:opacity-50"
+            title="Download contract file"
+          >
+            {actionLoading === `download-${contract.contractId}` ? (
+              <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+          </button>
           {/* Parties Information */}
           <div>
             <div className="flex items-center space-x-2 mb-4">
@@ -424,10 +381,50 @@ const ModernContractCard = ({
           {/* Action Buttons */}
           <div className="flex justify-between items-center pt-4 border-t border-gray-200">
             <div className="flex space-x-3">
+              {canSign && (
+                <button
+                  onClick={() => onSign && onSign(contract.fileHash)}
+                  disabled={actionLoading === contract.fileHash}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl font-medium hover:bg-blue-200 transition-colors text-sm border border-blue-300 disabled:opacity-50"
+                >
+                  {actionLoading === contract.fileHash ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Signing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PenTool className="w-4 h-4" />
+                      <span>Sign</span>
+                    </>
+                  )}
+                </button>
+              )}
+              
+              {canDeactivate && (
+                <button
+                  onClick={() => onDeactivate && onDeactivate(contract.fileHash)}
+                  disabled={actionLoading === contract.fileHash}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl font-medium hover:bg-red-200 transition-colors text-sm border border-red-300 disabled:opacity-50"
+                >
+                  {actionLoading === contract.fileHash ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Deactivating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Deactivate</span>
+                    </>
+                  )}
+                </button>
+              )}
+              
               {onViewDetails && (
                 <button
                   onClick={() => onViewDetails(contract)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors text-sm"
                 >
                   <ExternalLink className="w-4 h-4" />
                   <span>View on Explorer</span>
