@@ -16,6 +16,14 @@ class FileUploadService {
   async uploadFile(file, metadata = {}, onProgress = null) {
     try {
       console.log('📤 Starting file upload to Storj:', file.name);
+      console.log('📤 File details:', { 
+        name: file.name, 
+        size: file.size, 
+        type: file.type,
+        lastModified: file.lastModified 
+      });
+      console.log('📤 Upload URL:', `${this.baseUrl}/upload`);
+      console.log('📤 Metadata:', metadata);
 
       // Create FormData
       const formData = new FormData();
@@ -52,7 +60,14 @@ class FileUploadService {
             if (xhr.status >= 200 && xhr.status < 300) {
               const response = JSON.parse(xhr.responseText);
               console.log('✅ File uploaded successfully:', response);
-              resolve(response);
+              
+              // Handle new API format that wraps response in {success: true, data: {...}}
+              if (response.success && response.data) {
+                resolve(response.data);
+              } else {
+                // Fallback for old format
+                resolve(response);
+              }
             } else {
               const errorResponse = JSON.parse(xhr.responseText);
               console.error('❌ Upload failed:', errorResponse);
@@ -132,7 +147,14 @@ class FileUploadService {
             if (xhr.status >= 200 && xhr.status < 300) {
               const response = JSON.parse(xhr.responseText);
               console.log('✅ Multiple files uploaded successfully:', response);
-              resolve(response);
+              
+              // Handle new API format that wraps response in {success: true, data: {...}}
+              if (response.success && response.data) {
+                resolve(response.data);
+              } else {
+                // Fallback for old format
+                resolve(response);
+              }
             } else {
               const errorResponse = JSON.parse(xhr.responseText);
               reject(new Error(errorResponse.message || `Upload failed with status ${xhr.status}`));
@@ -207,7 +229,7 @@ class FileUploadService {
         errors.push(`File too large. Maximum size is ${maxSize / 1024 / 1024}MB`);
       }
 
-      if (!allowedTypes.includes(file.mimetype || file.type)) {
+      if (!allowedTypes.includes(file.type)) {
         errors.push('File type not supported. Only images, PDFs, and documents are allowed');
       }
     }

@@ -4,13 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
 import { useBlockchain as useBlockchainHook } from '../hooks/useBlockchain'; // Your ORIGINAL hook
-import { useBlockchain as useBlockchainContext } from '../contexts/BlockchainContext'; // Your ORIGINAL context
 import ModernContractCard from '../components/ContractCard';
 import { LoadingCard, EmptyState } from '../components/LoadingStates';
+import fileDownloadService from '../services/fileDownloadService';
 
 const ViewContracts = ({ onBack, onStatus }) => {
   const { account, getInjector, signMessage } = useWallet();
-  const { connected } = useBlockchainContext(); // Get connection status
   const { 
     getContracts,           // Your ORIGINAL hook functions
     signContract,           
@@ -199,6 +198,43 @@ const ViewContracts = ({ onBack, onStatus }) => {
     }
   };
 
+  const handleDownload = async (contractId) => {
+    if (!contractId) {
+      onStatus('❌ Contract ID not available', 'error');
+      return;
+    }
+
+    const downloadKey = `download-${contractId}`;
+    setActionLoading(downloadKey);
+    
+    try {
+      onStatus('📥 Starting file download...', 'info');
+      
+      await fileDownloadService.downloadFileByContractId(
+        contractId,
+        (progress, loaded, total) => {
+          const progressText = fileDownloadService.formatDownloadProgress(progress, loaded, total);
+          onStatus(`📥 Downloading... ${progressText}`, 'info');
+        }
+      );
+      
+      onStatus('✅ File downloaded successfully!', 'success');
+      
+    } catch (error) {
+      console.error('❌ Download error:', error);
+      
+      if (error.message.includes('No files found')) {
+        onStatus('❌ No contract file found for download', 'error');
+      } else if (error.message.includes('Network error')) {
+        onStatus('❌ Network error during download. Please try again.', 'error');
+      } else {
+        onStatus(`❌ Download failed: ${error.message}`, 'error');
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleCardToggle = (contractId) => {
     setExpandedCard(expandedCard === contractId ? null : contractId);
   };
@@ -223,8 +259,9 @@ const ViewContracts = ({ onBack, onStatus }) => {
   // Filter contracts
   const filteredContracts = contracts.filter(contract => {
     if (filter === 'all') return true;
-    if (filter === 'pending') return contract.status !== 'BothPartiesSigned';
-    if (filter === 'completed') return contract.status === 'BothPartiesSigned';
+    if (filter === 'pending') return !['BothPartiesSigned', 'Completed', 'Deactivated'].includes(contract.status);
+    if (filter === 'completed') return ['BothPartiesSigned', 'Completed'].includes(contract.status);
+    if (filter === 'deactivated') return contract.status === 'Deactivated';
     return true;
   });
 
@@ -233,12 +270,17 @@ const ViewContracts = ({ onBack, onStatus }) => {
     { 
       key: 'pending', 
       label: 'Pending', 
-      count: contracts.filter(c => c.status !== 'BothPartiesSigned').length 
+      count: contracts.filter(c => !['BothPartiesSigned', 'Completed', 'Deactivated'].includes(c.status)).length 
     },
     { 
       key: 'completed', 
       label: 'Completed', 
-      count: contracts.filter(c => c.status === 'BothPartiesSigned').length 
+      count: contracts.filter(c => ['BothPartiesSigned', 'Completed'].includes(c.status)).length 
+    },
+    { 
+      key: 'deactivated', 
+      label: 'Deactivated', 
+      count: contracts.filter(c => c.status === 'Deactivated').length 
     }
   ];
 
@@ -278,7 +320,13 @@ const ViewContracts = ({ onBack, onStatus }) => {
                 onClick={() => setFilter(filterOption.key)}
                 className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
                   filter === filterOption.key
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    ? filterOption.key === 'deactivated'
+                      ? 'bg-red-100 text-red-700 border border-red-200'
+                      : filterOption.key === 'completed'
+                      ? 'bg-green-100 text-green-700 border border-green-200'
+                      : filterOption.key === 'pending'
+                      ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                      : 'bg-blue-100 text-blue-700 border border-blue-200'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -307,6 +355,12 @@ const ViewContracts = ({ onBack, onStatus }) => {
           description={
             filter === 'all' 
               ? "You don't have any contracts yet. Create your first contract to get started."
+              : filter === 'pending'
+              ? "No pending contracts. All your contracts are either completed or deactivated."
+              : filter === 'completed'
+              ? "No completed contracts yet. Sign your pending contracts to complete them."
+              : filter === 'deactivated'
+              ? "No deactivated contracts. This shows contracts that have been cancelled or removed."
               : `No contracts match the ${filter} filter.`
           }
           action={filter === 'all' ? () => onBack() : undefined}
@@ -321,6 +375,7 @@ const ViewContracts = ({ onBack, onStatus }) => {
               userAddress={account?.address}
               onSign={handleSign}
               onDeactivate={handleDeactivate}
+              onDownload={handleDownload}
               actionLoading={actionLoading}
               isExpanded={expandedCard === (contract.fileHash || contract.id)}
               onToggle={() => handleCardToggle(contract.fileHash || contract.id)}

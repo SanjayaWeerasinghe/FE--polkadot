@@ -132,91 +132,110 @@ export const WalletProvider = ({ children }) => {
     }
   };
 
-  // PROPER DISCONNECT: Ask Polkadot extension to disconnect
+  // PROPER DISCONNECT: Clear authorization and force user to reauthorize
   const disconnectWallet = async () => {
     if (disconnecting || connecting) return;
     
     setDisconnecting(true);
     
     try {
-      console.log('🔌 Requesting extension to disconnect...');
+      console.log('🔌 Disconnecting from Polkadot extension...');
       
-      // Method 1: Use the extension's disconnect method if available
-      if (window.injectedWeb3) {
-        // Try to disconnect from Polkadot.js extension
-        if (window.injectedWeb3['polkadot-js']?.disconnect) {
-          try {
-            await window.injectedWeb3['polkadot-js'].disconnect();
-            console.log('✅ Polkadot.js extension disconnected');
-          } catch (e) {
-            console.log('ℹ️ Polkadot.js disconnect method not available');
-          }
-        }
-        
-        // Try to disconnect from SubWallet
-        if (window.injectedWeb3['subwallet-js']?.disconnect) {
-          try {
-            await window.injectedWeb3['subwallet-js'].disconnect();
-            console.log('✅ SubWallet extension disconnected');
-          } catch (e) {
-            console.log('ℹ️ SubWallet disconnect method not available');
-          }
-        }
-      }
-
-      // Method 2: Revoke permissions by calling web3Enable with a different app name
+      // Method 1: Clear all extension-related data
       try {
-        console.log('🔄 Revoking extension permissions...');
-        
-        // This tells the extension we're disconnecting
-        await web3Enable(''); // Empty string revokes permissions
-        
-        // Wait a moment for the extension to process
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        console.log('✅ Extension permissions revoked');
-      } catch (permissionError) {
-        console.log('ℹ️ Permission revocation not supported:', permissionError.message);
-      }
-
-      // Method 3: Send disconnect message to extension (if it supports it)
-      try {
-        if (window.postMessage) {
-          // Send disconnect message to extension
-          window.postMessage({
-            origin: 'Digital Notarized Contracts',
-            type: 'DISCONNECT_REQUEST',
-            source: 'page'
-          }, window.location.origin);
-          
-          console.log('📤 Disconnect message sent to extension');
-        }
-      } catch (messageError) {
-        console.log('ℹ️ Message sending failed:', messageError.message);
-      }
-
-      // Method 4: Clear extension-specific storage if accessible
-      try {
-        // Some extensions store connection state in localStorage
+        // Clear extension connection preferences
         const extensionKeys = Object.keys(localStorage).filter(key => 
           key.includes('polkadot') || 
           key.includes('subwallet') || 
-          key.includes('extension')
+          key.includes('extension') ||
+          key.includes('web3Enable') ||
+          key.includes('injected')
         );
         
         extensionKeys.forEach(key => {
           try {
             localStorage.removeItem(key);
+            console.log(`🧹 Cleared: ${key}`);
           } catch (e) {
             // Silent fail for protected keys
           }
         });
+
+        // Clear session storage too
+        const sessionKeys = Object.keys(sessionStorage).filter(key => 
+          key.includes('polkadot') || 
+          key.includes('subwallet') || 
+          key.includes('extension')
+        );
         
-        if (extensionKeys.length > 0) {
-          console.log('🧹 Cleared extension storage keys:', extensionKeys);
-        }
+        sessionKeys.forEach(key => {
+          try {
+            sessionStorage.removeItem(key);
+            console.log(`🧹 Cleared session: ${key}`);
+          } catch (e) {
+            // Silent fail
+          }
+        });
+        
       } catch (storageError) {
         console.log('ℹ️ Extension storage cleanup failed:', storageError.message);
+      }
+
+      // Method 2: Try to revoke permissions by re-enabling with null
+      try {
+        console.log('🔄 Revoking extension authorization...');
+        
+        // Call web3Enable with a different app name to revoke current authorization
+        await web3Enable('__DISCONNECT__' + Date.now());
+        
+        // Wait for the extension to process
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        console.log('✅ Extension authorization revoked');
+      } catch (permissionError) {
+        console.log('ℹ️ Permission revocation attempt failed:', permissionError.message);
+      }
+
+      // Method 3: Send custom events to notify extension
+      try {
+        // Dispatch custom events that some extensions listen for
+        window.dispatchEvent(new CustomEvent('polkadot-disconnect', {
+          detail: { 
+            origin: 'Digital Notarized Contracts',
+            action: 'disconnect',
+            timestamp: Date.now()
+          }
+        }));
+
+        window.dispatchEvent(new CustomEvent('substrate-disconnect', {
+          detail: { 
+            origin: 'Digital Notarized Contracts'
+          }
+        }));
+        
+        console.log('📤 Disconnect events dispatched');
+      } catch (eventError) {
+        console.log('ℹ️ Event dispatch failed:', eventError.message);
+      }
+
+      // Method 4: Try to clear injected web3 references
+      try {
+        if (window.injectedWeb3) {
+          // Clear the cached extensions
+          Object.keys(window.injectedWeb3).forEach(extensionName => {
+            try {
+              // Some extensions expose a disable method
+              if (window.injectedWeb3[extensionName]?.disable) {
+                window.injectedWeb3[extensionName].disable();
+                console.log(`✅ Disabled extension: ${extensionName}`);
+              }
+            } catch (e) {
+              // Extension doesn't support disable
+            }
+          });
+        }
+      } catch (injectedError) {
+        console.log('ℹ️ Injected web3 cleanup failed:', injectedError.message);
       }
 
       // Clear our local state
@@ -228,9 +247,10 @@ export const WalletProvider = ({ children }) => {
       // Clear our stored connection data
       localStorage.removeItem('lastConnectedAccount');
       
-      console.log('✅ Wallet disconnected successfully');
+      console.log('✅ App disconnected from wallet');
+      console.log('ℹ️ Note: You may need to manually disconnect from the Polkadot.js extension popup');
       
-      // Force reload of extension state
+      // Force re-check extension availability after disconnect
       setTimeout(() => {
         const available = !!(window.injectedWeb3?.['polkadot-js'] || window.injectedWeb3?.['subwallet-js']);
         setExtensionAvailable(available);
@@ -239,20 +259,54 @@ export const WalletProvider = ({ children }) => {
     } catch (error) {
       console.error('⚠️ Error during wallet disconnection:', error);
       
-      // Fallback: clear local state even if extension disconnect fails
+      // Always clear local state regardless of errors
       setAccount(null);
       setAccounts([]);
       setInjectedExtensions([]);
       setError(null);
       localStorage.removeItem('lastConnectedAccount');
       
-      console.log('✅ Local state cleared despite disconnect error');
+      console.log('✅ Local state cleared');
     } finally {
       setDisconnecting(false);
     }
   };
 
-  // Alternative method: Request extension to show disconnect UI
+  // Enhanced disconnect with user guidance
+  const disconnectWithGuidance = async (onStatusCallback) => {
+    // First do our app-level disconnect
+    await disconnectWallet();
+    
+    // Provide status update
+    if (onStatusCallback) {
+      onStatusCallback(
+        '✅ App disconnected successfully! For complete disconnection, please also disconnect from the Polkadot.js extension by clicking the extension icon and removing this site.',
+        'success'
+      );
+    }
+    
+    // Try to help open extension popup
+    try {
+      // Attempt to trigger extension popup for easier access
+      await web3Enable('__OPEN_EXTENSION_FOR_DISCONNECT__');
+      
+      if (onStatusCallback) {
+        onStatusCallback(
+          'ℹ️ Extension popup should open. Find "Digital Notarized Contracts" and click disconnect.',
+          'info'
+        );
+      }
+    } catch (e) {
+      if (onStatusCallback) {
+        onStatusCallback(
+          'ℹ️ Please manually open the Polkadot.js extension, find "Digital Notarized Contracts" in connected sites, and click disconnect.',
+          'warning'
+        );
+      }
+    }
+  };
+
+  // Alternative method: Request extension to show disconnect UI  
   const requestExtensionDisconnect = async () => {
     try {
       console.log('🔄 Requesting extension disconnect UI...');
@@ -419,6 +473,7 @@ export const WalletProvider = ({ children }) => {
     connectWallet,
     switchAccount,
     disconnectWallet,
+    disconnectWithGuidance, // Enhanced disconnect with user guidance
     requestExtensionDisconnect, // Alternative disconnect method
     getInjector,
     signMessage,

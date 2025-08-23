@@ -1,7 +1,6 @@
 // src/App.js - Using Your ORIGINAL BlockchainContext with flexible connection handling
 import React, { useState } from 'react';
 import { useWallet } from './contexts/WalletContext';
-import { useBlockchain } from './contexts/BlockchainContext'; // Your ORIGINAL context
 
 // Import modern components
 import ModernNavbar from './components/Navbar';
@@ -20,20 +19,14 @@ import ErrorBoundary from './components/ErrorBoundary';
 function App() {
   const [currentPage, setCurrentPage] = useState('menu');
   const { account } = useWallet();
-  const { connecting, connected, error: blockchainError, retryConnection } = useBlockchain(); // Your ORIGINAL context
   
   // Toast notifications
-  const { toasts, removeToast, success, error, warning, info } = useToast();
+  const { toasts, removeToast, success, error, warning, info, loading, celebration, blockchain } = useToast();
 
   const handleNavigation = (page) => {
     setCurrentPage(page);
-    // Show navigation feedback but don't block if no connection
     if (page !== 'menu') {
-      if (!connected) {
-        warning(`Navigating to ${page}. Some features may require blockchain connection.`);
-      } else {
-        info(`Navigating to ${page}...`);
-      }
+      info(`Navigating to ${page}...`);
     }
   };
 
@@ -70,97 +63,49 @@ function App() {
       );
     }
 
-    // Show blockchain connection status but don't block access
-    const connectionWarning = !connected && !connecting && (
-      <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-yellow-800 font-medium">⚠️ Blockchain Connection Issue</p>
-            <p className="text-sm text-yellow-600 mt-1">
-              {blockchainError || 'Unable to connect to blockchain. Some features may not work.'}
-            </p>
-          </div>
-          <button
-            onClick={retryConnection}
-            className="px-4 py-2 bg-yellow-200 text-yellow-800 rounded-lg hover:bg-yellow-300 transition-colors text-sm font-medium"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
 
     switch (currentPage) {
       case 'initiate':
         return (
-          <div>
-            {connectionWarning}
-            <InitiateContract 
-              onBack={() => setCurrentPage('menu')} 
-              onStatus={(message, type) => {
-                if (type === 'success') success(message);
-                else if (type === 'error') error(message);
-                else if (type === 'warning') warning(message);
-                else info(message);
-              }}
-            />
-          </div>
+          <InitiateContract 
+            onBack={() => setCurrentPage('menu')} 
+            onStatus={(message, type) => {
+              if (type === 'success') success(message);
+              else if (type === 'error') error(message);
+              else if (type === 'warning') warning(message);
+              else info(message);
+            }}
+          />
         );
       case 'sign':
         return (
-          <div>
-            {connectionWarning}
-            <SignContract 
-              onBack={() => setCurrentPage('menu')} 
-              onStatus={(message, type) => {
-                if (type === 'success') success(message);
-                else if (type === 'error') error(message);
-                else if (type === 'warning') warning(message);
-                else info(message);
-              }}
-            />
-          </div>
+          <SignContract 
+            onBack={() => setCurrentPage('menu')} 
+            onStatus={(message, type) => {
+              if (type === 'success') success(message);
+              else if (type === 'error') error(message);
+              else if (type === 'warning') warning(message);
+              else info(message);
+            }}
+          />
         );
       case 'view':
         return (
-          <div>
-            {connectionWarning}
-            <ViewContracts 
-              onBack={() => setCurrentPage('menu')} 
-              onStatus={(message, type) => {
-                if (type === 'success') success(message);
-                else if (type === 'error') error(message);
-                else if (type === 'warning') warning(message);
-                else info(message);
-              }}
-            />
-          </div>
+          <ViewContracts 
+            onBack={() => setCurrentPage('menu')} 
+            onStatus={(message, type) => {
+              if (type === 'success') success(message);
+              else if (type === 'error') error(message);
+              else if (type === 'warning') warning(message);
+              else info(message);
+            }}
+          />
         );
       default:
         return <ModernDashboard onNavigate={handleNavigation} />;
     }
   };
 
-  // Show loading screen only briefly during initial connection attempt
-  if (connecting && currentPage === 'menu') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Connecting to Blockchain</h2>
-          <p className="text-gray-600 mb-6">Establishing connection to the network...</p>
-          <button
-            onClick={() => setCurrentPage('menu')}
-            className="text-blue-600 hover:text-blue-800 underline text-sm"
-          >
-            Continue without waiting
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <ErrorBoundary>
@@ -170,27 +115,17 @@ function App() {
           currentPage={currentPage}
           onNavigate={handleNavigation}
           account={account}
+          onStatus={(message, type) => {
+            if (type === 'success') success(message);
+            else if (type === 'error') error(message);
+            else if (type === 'warning') warning(message);
+            else if (type === 'loading') loading(message);
+            else if (type === 'celebration') celebration(message);
+            else if (type === 'blockchain') blockchain(message);
+            else info(message);
+          }}
         />
         
-        {/* Connection Status Bar (if there are issues) */}
-        {currentPage === 'menu' && !connected && !connecting && blockchainError && (
-          <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-3">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-yellow-800">
-                  Blockchain connection issues detected. App is still functional.
-                </span>
-              </div>
-              <button
-                onClick={retryConnection}
-                className="text-sm text-yellow-700 hover:text-yellow-900 underline"
-              >
-                Retry Connection
-              </button>
-            </div>
-          </div>
-        )}
         
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

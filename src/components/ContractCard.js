@@ -12,7 +12,8 @@ import {
   FileText,
   Users,
   Shield,
-  Calendar
+  Calendar,
+  Download
 } from 'lucide-react';
 
 const ModernContractCard = ({ 
@@ -20,6 +21,7 @@ const ModernContractCard = ({
   userAddress, 
   onSign, 
   onDeactivate, 
+  onDownload,
   onViewDetails,
   actionLoading,
   isExpanded = false,
@@ -43,11 +45,17 @@ const ModernContractCard = ({
 
   // Determine if user can deactivate
   const canDeactivate = (isFirstParty || isSecondParty) && 
-    !['Deactivated'].includes(contract.status);
+    !['Deactivated', 'BothPartiesSigned', 'Completed'].includes(contract.status);
 
   const getStatusConfig = (status) => {
     const configs = {
       'BothPartiesSigned': {
+        color: 'bg-green-100 text-green-800 border-green-200',
+        icon: CheckCircle,
+        label: 'Completed',
+        description: 'All parties have signed'
+      },
+      'Completed': {
         color: 'bg-green-100 text-green-800 border-green-200',
         icon: CheckCircle,
         label: 'Completed',
@@ -84,7 +92,21 @@ const ModernContractCard = ({
   };
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+    if (!date) return 'N/A';
+    
+    // Handle timestamp from blockchain (could be string with commas or number)
+    let timestamp = date;
+    if (typeof date === 'string') {
+      // Remove commas and convert to number
+      timestamp = parseInt(date.replace(/,/g, ''));
+    }
+    
+    // Convert to milliseconds if it looks like seconds (less than year 2100 in milliseconds)
+    if (timestamp < 4102444800000) {
+      timestamp = timestamp * 1000;
+    }
+    
+    return new Date(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -115,7 +137,7 @@ const ModernContractCard = ({
                 <FileText className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">{contract.name}</h3>
+                <h3 className="text-xl font-semibold text-gray-900">{contract.contractName || contract.name || 'Untitled Contract'}</h3>
                 <p className="text-sm text-gray-500">Your role: {userRole}</p>
               </div>
             </div>
@@ -170,39 +192,61 @@ const ModernContractCard = ({
         <p className="text-sm text-gray-600 mb-4">{statusConfig.description}</p>
 
         {/* Quick Actions */}
-        {(canSign || canDeactivate) && (
-          <div className="flex space-x-3">
-            {canSign && (
-              <button
-                onClick={() => onSign && onSign(contract.fileHash)}
-                disabled={actionLoading === contract.fileHash}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
-              >
-                {actionLoading === contract.fileHash ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Signing...</span>
-                  </>
-                ) : (
-                  <>
-                    <PenTool className="w-4 h-4" />
-                    <span>Sign Contract</span>
-                  </>
-                )}
-              </button>
+        <div className="space-y-3">
+          {/* Primary Actions Row */}
+          {(canSign || canDeactivate) && (
+            <div className="flex space-x-3">
+              {canSign && (
+                <button
+                  onClick={() => onSign && onSign(contract.fileHash)}
+                  disabled={actionLoading === contract.fileHash}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  {actionLoading === contract.fileHash ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Signing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PenTool className="w-4 h-4" />
+                      <span>Sign Contract</span>
+                    </>
+                  )}
+                </button>
+              )}
+              
+              {canDeactivate && (
+                <button
+                  onClick={() => onDeactivate && onDeactivate(contract.fileHash)}
+                  disabled={actionLoading === contract.fileHash}
+                  className="px-4 py-2 bg-red-100 text-red-700 rounded-xl font-medium hover:bg-red-200 transition-colors text-sm border border-red-300 disabled:opacity-50"
+                >
+                  Deactivate
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Download Button - Always available */}
+          <button
+            onClick={() => onDownload && onDownload(contract.contractId)}
+            disabled={actionLoading === `download-${contract.contractId}`}
+            className="w-full bg-green-100 text-green-700 px-4 py-2 rounded-xl font-medium hover:bg-green-200 transition-all duration-200 flex items-center justify-center space-x-2 border border-green-300 disabled:opacity-50"
+          >
+            {actionLoading === `download-${contract.contractId}` ? (
+              <>
+                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                <span>Downloading...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                <span>Download Contract File</span>
+              </>
             )}
-            
-            {canDeactivate && (
-              <button
-                onClick={() => onDeactivate && onDeactivate(contract.fileHash)}
-                disabled={actionLoading === contract.fileHash}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-xl font-medium hover:bg-red-200 transition-colors text-sm border border-red-300 disabled:opacity-50"
-              >
-                Deactivate
-              </button>
-            )}
-          </div>
-        )}
+          </button>
+        </div>
 
         {/* Expand/Collapse Button */}
         <button
@@ -290,11 +334,11 @@ const ModernContractCard = ({
               <div className="grid md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <span className="text-sm font-medium text-gray-700">Contract ID:</span>
-                  <p className="text-sm text-gray-600 font-mono">{contract.id}</p>
+                  <p className="text-sm text-gray-600 font-mono">{contract.contractId || contract.id}</p>
                 </div>
                 <div>
                   <span className="text-sm font-medium text-gray-700">Block Number:</span>
-                  <p className="text-sm text-gray-600">{contract.blockNumber || 'N/A'}</p>
+                  <p className="text-sm text-gray-600">{contract.createdBlock || contract.blockNumber || 'N/A'}</p>
                 </div>
               </div>
               
@@ -348,9 +392,9 @@ const ModernContractCard = ({
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-gray-500">{formatDate(signature.timestamp)}</p>
+                        <p className="text-xs text-gray-500">{formatDate(signature.signedAtTime || signature.timestamp)}</p>
                         <button
-                          onClick={() => copyToClipboard(signature.signature, 'Signature')}
+                          onClick={() => copyToClipboard(signature.signatureData || signature.signature, 'Signature')}
                           className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
                         >
                           <Copy className="w-3 h-3" />
@@ -365,7 +409,7 @@ const ModernContractCard = ({
           )}
 
           {/* Metadata */}
-          {contract.metadata && contract.metadata !== contract.name && (
+          {contract.metadata && contract.metadata !== contract.contractName && contract.metadata !== contract.name && (
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <FileText className="w-5 h-5 text-gray-600" />

@@ -3,13 +3,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, CheckCircle, AlertCircle, PenTool } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
 import { useBlockchain as useBlockchainHook } from '../hooks/useBlockchain'; // Your ORIGINAL hook
-import { useBlockchain as useBlockchainContext } from '../contexts/BlockchainContext'; // Your ORIGINAL context
 import ModernFileUpload from '../components/FileUpload';
 import { ModernSpinner } from '../components/LoadingStates';
+import fileUploadService from '../services/fileUploadService';
 
 const SignContract = ({ onBack, onStatus }) => {
   const { account, getInjector, signMessage } = useWallet();
-  const { connected } = useBlockchainContext(); // Get connection status
   const { 
     checkContractExists,    // Your ORIGINAL hook functions
     signContract,          
@@ -108,9 +107,29 @@ const SignContract = ({ onBack, onStatus }) => {
       onStatus('📝 Please sign the transaction in your wallet...', 'info');
       
       // Use your ORIGINAL hook function with proper signature
-      await signContract(injector, account.address, fileInfo.hash, signatureResult.signature);
+      const signResult = await signContract(injector, account.address, fileInfo.hash, signatureResult.signature);
       
-      onStatus('✅ Contract signed successfully!', 'success');
+      onStatus('🔄 Saving signed contract file to secure storage...', 'loading');
+      
+      try {
+        // Save the signed contract file to backend
+        const backendResult = await fileUploadService.uploadFile(
+          fileInfo.file, // The original file from form
+          {
+            contractId: contractInfo?.contractId || 'signed',
+            contractHash: signResult?.txHash || fileInfo.hash,
+            contractName: contractInfo?.contractName || contractInfo?.name || 'Signed Contract',
+            signatureHash: signResult?.txHash
+          }
+        );
+        
+        console.log('Signed file saved to backend:', backendResult);
+        onStatus('✅ Contract signed and file saved successfully!', 'success');
+        
+      } catch (backendError) {
+        console.error('Backend save error after signing:', backendError);
+        onStatus('⚠️ Contract signed successfully, but file save failed', 'warning');
+      }
       
       // Refresh contract info to show updated status
       setTimeout(() => {
@@ -177,15 +196,6 @@ const SignContract = ({ onBack, onStatus }) => {
 
         {/* Right Column - Contract Verification */}
         <div className="space-y-6">
-          {/* Connection Status Info */}
-          {!connected && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-              <p className="text-yellow-800 font-medium">⚠️ Blockchain Connection Status</p>
-              <p className="text-sm text-yellow-600 mt-1">
-                Blockchain connection is still establishing. You can upload files but signing may require a stable connection.
-              </p>
-            </div>
-          )}
 
           {fileInfo && (
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
