@@ -138,8 +138,7 @@ class BlockchainService {
     
     // Default endpoints
     return [
-      'wss://144.91.67.54:9946',  // Your production endpoint
-      'ws://127.0.0.1:9944'       // Local development fallback
+'wss://144.91.67.54:9946',
     ];
   }
 

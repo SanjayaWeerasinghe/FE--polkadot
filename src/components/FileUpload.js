@@ -1,112 +1,105 @@
-import React, { useState, useRef } from 'react';
+// components/ModernFileUpload.js
+import React, { useState } from 'react';
+import { Upload, CheckCircle, FileText, AlertCircle } from 'lucide-react';
 
-const FileUpload = ({ 
+const ModernFileUpload = ({ 
   onFileSelect, 
   fileInfo, 
-  disabled = false, 
-  accept = '.pdf,.doc,.docx,.txt',
-  maxSize = 10 * 1024 * 1024, // 10MB
-  className = ''
+  disabled, 
+  accept = ".pdf,.doc,.docx,.txt", 
+  maxSize = 10 * 1024 * 1024,
+  title = "Contract Document",
+  description = "Supports PDF, DOC, DOCX, TXT"
 }) => {
-  const [dragOver, setDragOver] = useState(false);
-  const [calculating, setCalculating] = useState(false);
-  const fileInputRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Calculate SHA256 hash of file
-  const calculateFileHash = async (file) => {
-    setCalculating(true);
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hash = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hash;
-    } finally {
-      setCalculating(false);
-    }
-  };
-
-  // Handle file selection
-  const handleFileSelect = async (file) => {
-    if (!file) return;
-
-    // Validate file size
-    if (file.size > maxSize) {
-      alert(`File too large. Maximum size is ${(maxSize / 1024 / 1024).toFixed(1)}MB`);
-      return;
-    }
-
-    // Validate file type
-    const extension = '.' + file.name.split('.').pop().toLowerCase();
-    const acceptedTypes = accept.split(',').map(type => type.trim());
-    if (!acceptedTypes.includes(extension)) {
-      alert(`File type not supported. Accepted types: ${accept}`);
-      return;
-    }
-
-    try {
-      // Create initial file info
-      const initialFileInfo = {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        hash: null,
-        file: file
-      };
-
-      // Call callback with initial info
-      onFileSelect(initialFileInfo);
-
-      // Calculate hash
-      const hash = await calculateFileHash(file);
-      
-      // Update with hash
-      const finalFileInfo = {
-        ...initialFileInfo,
-        hash: hash
-      };
-      
-      onFileSelect(finalFileInfo);
-    } catch (error) {
-      console.error('Error processing file:', error);
-      alert('Error processing file. Please try again.');
-    }
-  };
-
-  // Handle drop
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    
-    if (disabled) return;
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileSelect(files[0]);
-    }
-  };
-
-  // Handle drag events
   const handleDragOver = (e) => {
     e.preventDefault();
-    if (!disabled) {
-      setDragOver(true);
-    }
+    if (!disabled) setIsDragging(true);
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
-    setDragOver(false);
+    setIsDragging(false);
   };
 
-  // Handle click
-  const handleClick = () => {
-    if (!disabled && fileInputRef.current) {
-      fileInputRef.current.click();
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (disabled) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFileSelection(files[0]);
     }
   };
 
-  // Format file size
+  const validateFile = (file) => {
+    // Size validation
+    if (maxSize && file.size > maxSize) {
+      return `File size must be less than ${(maxSize / (1024 * 1024)).toFixed(1)}MB`;
+    }
+
+    // Type validation
+    const acceptedTypes = accept.split(',').map(type => type.trim().toLowerCase());
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+    const isValidType = acceptedTypes.some(type => 
+      type === fileExtension || 
+      file.type.includes(type.replace('.', ''))
+    );
+
+    if (!isValidType) {
+      return `File type not supported. Accepted types: ${accept}`;
+    }
+
+    return null;
+  };
+
+  const generateHash = async (file) => {
+    // In a real implementation, you would use crypto.subtle.digest
+    // Use your ORIGINAL hash generation method
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    // Use your ORIGINAL format with '0x' prefix
+    const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  };
+
+  const handleFileSelection = async (file) => {
+    setError(null);
+    
+    // Validate file
+    const validationError = validateFile(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      // Read file and generate hash
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const hash = await generateHash(file);
+        
+        onFileSelect({
+          file,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          hash,
+          content: reader.result,
+          lastModified: file.lastModified
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (err) {
+      setError('Error processing file. Please try again.');
+      console.error('File processing error:', err);
+    }
+  };
+
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -115,126 +108,153 @@ const FileUpload = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const getFileIcon = (fileName) => {
+    const extension = fileName.split('.').pop().toLowerCase();
+    switch (extension) {
+      case 'pdf': return '📄';
+      case 'doc':
+      case 'docx': return '📝';
+      case 'txt': return '📋';
+      default: return '📄';
+    }
+  };
+
   return (
-    <div className={`mb-6 ${className}`}>
-      <label className="block font-semibold text-gray-700 mb-3 text-lg">
-        Contract Document
-      </label>
+    <div className="space-y-4">
+      {title && (
+        <label className="block text-sm font-semibold text-gray-900 mb-2">
+          {title}
+        </label>
+      )}
       
-      {/* Upload Area */}
       <div
-        className={`
-          border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer file-upload-drag
-          ${dragOver ? 'border-blue-500 bg-blue-50 scale-105 dragover' : 'border-gray-300 bg-gray-50'}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-500 hover:bg-blue-50'}
-          ${calculating ? 'pointer-events-none' : ''}
-        `}
+        className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 ${
+          isDragging
+            ? 'border-blue-400 bg-blue-50 scale-102'
+            : fileInfo
+            ? 'border-green-400 bg-green-50'
+            : error
+            ? 'border-red-400 bg-red-50'
+            : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={handleClick}
+        onClick={() => !disabled && document.getElementById('file-input').click()}
       >
-        {calculating ? (
-          <div className="animate-pulse">
-            <div className="text-6xl mb-4">⚙️</div>
-            <p className="text-lg font-medium mb-2 text-blue-600">
-              Calculating file hash...
-            </p>
-            <div className="flex justify-center">
-              <div className="spinner border-blue-500 border-t-transparent"></div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="text-6xl mb-4">📄</div>
-            <p className="text-lg font-medium mb-2">
-              <strong>Click to upload</strong> or drag and drop
-            </p>
-            <p className="text-gray-600 mb-4">
-              {accept.replace(/\./g, '').toUpperCase()} files (Max {(maxSize / 1024 / 1024).toFixed(1)}MB)
-            </p>
-            {dragOver && (
-              <p className="text-blue-600 font-medium animate-bounce">
-                Drop your file here!
-              </p>
-            )}
-          </>
-        )}
-        
         <input
-          ref={fileInputRef}
+          id="file-input"
           type="file"
           className="hidden"
           accept={accept}
-          onChange={(e) => e.target.files[0] && handleFileSelect(e.target.files[0])}
-          disabled={disabled || calculating}
+          onChange={(e) => e.target.files[0] && handleFileSelection(e.target.files[0])}
+          disabled={disabled}
         />
-      </div>
 
-      {/* File Info Display */}
-      {fileInfo && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4 animate-slideInRight">
+        {fileInfo ? (
+          // Success State
           <div className="space-y-3">
-            {/* File Details */}
+            <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">📎</span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-800 truncate">
-                    {fileInfo.name}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {formatFileSize(fileInfo.size)}
-                    {fileInfo.type && ` • ${fileInfo.type}`}
-                  </div>
-                </div>
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <span className="text-2xl">{getFileIcon(fileInfo.name)}</span>
+                <p className="font-semibold text-green-800">{fileInfo.name}</p>
+              </div>
+              <p className="text-sm text-green-600">
+                {formatFileSize(fileInfo.size)}
+              </p>
+              <div className="mt-3 p-3 bg-green-100 rounded-lg">
+                <p className="text-xs text-green-700 font-medium mb-1">Document Hash:</p>
+                <p className="text-xs text-green-600 font-mono break-all">
+                  {fileInfo.hash.slice(0, 32)}...
+                </p>
               </div>
             </div>
-
-            {/* Hash Display */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-semibold text-gray-700 text-sm">SHA256 Hash:</span>
-                {fileInfo.hash ? (
-                  <span className="text-green-600 text-sm">✅ Generated</span>
-                ) : (
-                  <span className="text-blue-600 text-sm">🔄 Calculating...</span>
-                )}
-              </div>
-              
-              {fileInfo.hash ? (
-                <div className="relative">
-                  <code className="block bg-white px-3 py-2 rounded-lg border text-xs font-mono break-all leading-relaxed">
-                    {fileInfo.hash}
-                  </code>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(fileInfo.hash);
-                      // You could add a toast notification here
-                    }}
-                    className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Copy hash to clipboard"
-                  >
-                    📋
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-lg border text-xs text-gray-500 italic">
-                  Hash will appear here once calculated...
-                </div>
-              )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onFileSelect(null);
+                setError(null);
+              }}
+              className="text-sm text-green-600 hover:text-green-800 underline"
+            >
+              Remove file
+            </button>
+          </div>
+        ) : error ? (
+          // Error State
+          <div className="space-y-3">
+            <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto">
+              <AlertCircle className="w-8 h-8 text-red-600" />
             </div>
-
-            {/* Security Note */}
-            <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded-lg">
-              💡 This hash uniquely identifies your document and ensures its integrity on the blockchain.
+            <div>
+              <p className="font-semibold text-red-800 mb-2">Upload Error</p>
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setError(null);
+              }}
+              className="text-sm text-red-600 hover:text-red-800 underline"
+            >
+              Try again
+            </button>
+          </div>
+        ) : (
+          // Default State
+          <div className="space-y-3">
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto transition-colors duration-300 ${
+              isDragging ? 'bg-blue-100' : 'bg-gray-100'
+            }`}>
+              <Upload className={`w-8 h-8 transition-colors duration-300 ${
+                isDragging ? 'text-blue-600' : 'text-gray-400'
+              }`} />
+            </div>
+            <div>
+              <p className={`text-lg font-semibold transition-colors duration-300 ${
+                isDragging ? 'text-blue-700' : 'text-gray-700'
+              }`}>
+                {isDragging ? 'Drop your file here' : 'Drop your contract here'}
+              </p>
+              <p className="text-sm text-gray-500">or click to browse files</p>
+              <p className="text-xs text-gray-400 mt-2">
+                {description} (max {(maxSize / (1024 * 1024)).toFixed(0)}MB)
+              </p>
             </div>
           </div>
+        )}
+
+        {/* Loading overlay */}
+        {disabled && (
+          <div className="absolute inset-0 bg-white/50 flex items-center justify-center rounded-2xl">
+            <div className="flex items-center space-x-2">
+              <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-gray-600">Processing...</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* File requirements */}
+      <div className="text-xs text-gray-500 space-y-1">
+        <div className="flex items-center space-x-2">
+          <CheckCircle className="w-3 h-3 text-green-500" />
+          <span>Supported formats: {accept.replace(/\./g, '').toUpperCase()}</span>
         </div>
-      )}
+        <div className="flex items-center space-x-2">
+          <CheckCircle className="w-3 h-3 text-green-500" />
+          <span>Maximum size: {(maxSize / (1024 * 1024)).toFixed(0)}MB</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <CheckCircle className="w-3 h-3 text-green-500" />
+          <span>Secure SHA-256 hash generation</span>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default FileUpload;
+export default ModernFileUpload;

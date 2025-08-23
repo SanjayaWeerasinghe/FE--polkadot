@@ -1,307 +1,124 @@
-// Enhanced SignContract.js with detailed success confirmation modal
-
-import React, { useState } from 'react';
+// pages/SignContract.js - Fixed infinite loading issue
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ArrowLeft, CheckCircle, AlertCircle, PenTool } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
-import { useBlockchain } from '../hooks/useBlockchain';
-import FileUpload from '../components/FileUpload';
-import { InlineSpinner } from '../components/LoadingSpinner';
+import { useBlockchain as useBlockchainHook } from '../hooks/useBlockchain'; // Your ORIGINAL hook
+import { useBlockchain as useBlockchainContext } from '../contexts/BlockchainContext'; // Your ORIGINAL context
+import ModernFileUpload from '../components/FileUpload';
+import { ModernSpinner } from '../components/LoadingStates';
 
 const SignContract = ({ onBack, onStatus }) => {
   const { account, getInjector, signMessage } = useWallet();
-  const { signContract, checkContractExists, loading } = useBlockchain();
+  const { connected } = useBlockchainContext(); // Get connection status
+  const { 
+    checkContractExists,    // Your ORIGINAL hook functions
+    signContract,          
+    loading,
+    error
+  } = useBlockchainHook();
   
   const [fileInfo, setFileInfo] = useState(null);
   const [contractInfo, setContractInfo] = useState(null);
   const [verifying, setVerifying] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [signatureResult, setSignatureResult] = useState(null);
+  const [isSigning, setIsSigning] = useState(false);
+  
+  // Use ref to avoid recreating verifyContract function
+  const onStatusRef = useRef(onStatus);
+  onStatusRef.current = onStatus;
 
-  // Success Modal Component for Contract Signing
-  const ContractSignSuccessModal = ({ result, contractInfo, onClose, onViewContracts }) => {
-    const formatAddress = (address) => {
-      if (!address) return '';
-      return `${address.slice(0, 8)}...${address.slice(-8)}`;
-    };
-
-    const formatTimestamp = () => {
-      return new Date().toLocaleString();
-    };
-
-    const copyToClipboard = (text, label) => {
-      navigator.clipboard.writeText(text);
-      onStatus(`📋 ${label} copied to clipboard!`, 'info');
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="text-6xl mb-4">✍️</div>
-            <h2 className="text-3xl font-bold text-green-600 mb-2">Contract Signed Successfully!</h2>
-            <p className="text-gray-600">Your digital signature has been recorded on the blockchain</p>
-          </div>
-
-          {/* Signature Details Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Left Column - Signature Info */}
-            <div className="space-y-6">
-              {/* Your Signature */}
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <h3 className="text-lg font-semibold text-green-800 mb-3">✅ Your Signature</h3>
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-sm font-medium text-green-700">Signer Address:</span>
-                    <div className="text-sm text-green-600 font-mono bg-green-100 rounded p-2 mt-1">
-                      <button
-                        onClick={() => copyToClipboard(account?.address || '', 'Address')}
-                        className="text-left w-full hover:text-green-800 transition-colors"
-                        title="Click to copy"
-                      >
-                        {account?.address || 'N/A'}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <span className="text-sm font-medium text-green-700">Signature Hash:</span>
-                    <div className="text-sm text-green-600 font-mono bg-green-100 rounded p-2 mt-1">
-                      <button
-                        onClick={() => copyToClipboard(result?.signature || '', 'Signature')}
-                        className="text-left w-full hover:text-green-800 transition-colors break-all"
-                        title="Click to copy"
-                      >
-                        {result?.signature ? `${result.signature.slice(0, 32)}...${result.signature.slice(-16)}` : 'N/A'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-sm font-medium text-green-700">Signed At:</span>
-                    <div className="text-sm text-green-600 mt-1">{formatTimestamp()}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contract Status */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <h3 className="text-lg font-semibold text-blue-800 mb-3">📋 Contract Status</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-blue-700">Contract Name:</span>
-                    <span className="text-sm text-blue-600">{contractInfo?.contractName || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-blue-700">Current Status:</span>
-                    <span className="text-sm text-blue-600 font-semibold">
-                      {contractInfo?.status === 'FirstPartySigned' ? 'Waiting for Second Party' : 
-                       contractInfo?.status === 'BothPartiesSigned' ? 'Fully Executed' : 
-                       'Updated'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-blue-700">Total Signatures:</span>
-                    <span className="text-sm text-blue-600">
-                      {(contractInfo?.signatures?.length || 0) + 1} of 2
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Contract Info */}
-            <div className="space-y-6">
-              {/* Document Info */}
-              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                <h3 className="text-lg font-semibold text-purple-800 mb-3">📄 Document Info</h3>
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-sm font-medium text-purple-700">Document Hash:</span>
-                    <div className="text-sm text-purple-600 font-mono bg-purple-100 rounded p-2 mt-1">
-                      <button
-                        onClick={() => copyToClipboard(fileInfo?.hash || '', 'Document Hash')}
-                        className="text-left w-full hover:text-purple-800 transition-colors break-all"
-                        title="Click to copy"
-                      >
-                        {fileInfo?.hash || 'N/A'}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <span className="text-sm font-medium text-purple-700">File Name:</span>
-                    <div className="text-sm text-purple-600 mt-1">{fileInfo?.name || 'N/A'}</div>
-                  </div>
-
-                  <div>
-                    <span className="text-sm font-medium text-purple-700">File Size:</span>
-                    <div className="text-sm text-purple-600 mt-1">
-                      {fileInfo?.size ? `${(fileInfo.size / 1024).toFixed(2)} KB` : 'N/A'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Blockchain Transaction */}
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                <h3 className="text-lg font-semibold text-orange-800 mb-3">⛓️ Blockchain Info</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-orange-700">Network:</span>
-                    <span className="text-sm text-orange-600">Substrate</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-orange-700">Transaction:</span>
-                    <span className="text-sm text-orange-600">✅ Confirmed</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-orange-700">Gas Used:</span>
-                    <span className="text-sm text-orange-600">Standard</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Next Steps */}
-          <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <h3 className="text-lg font-semibold text-blue-800 mb-3">🎯 What Happens Next?</h3>
-            <div className="text-blue-700 space-y-2 text-sm">
-              {contractInfo?.status === 'Initiated' && (
-                <>
-                  <p>• Your signature has been recorded as the first party signature</p>
-                  <p>• The second party will now be able to sign the contract</p>
-                  <p>• Once both parties sign, the contract will be fully executed</p>
-                  <p>• You will be notified when the contract is complete</p>
-                </>
-              )}
-              {contractInfo?.status === 'FirstPartySigned' && (
-                <>
-                  <p>• Your signature has been recorded as the second party signature</p>
-                  <p>• The contract is now fully executed with both signatures</p>
-                  <p>• All parties can view the complete signed contract</p>
-                  <p>• The contract is now legally binding on the blockchain</p>
-                </>
-              )}
-              <p>• You can track this contract's status in the "Check Your Contracts" section</p>
-              <p>• All signature data is permanently recorded on the blockchain</p>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {/* <button
-              onClick={onViewContracts}
-              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
-            >
-              📊 View My Contracts
-            </button> */}
-            
-            <button
-              onClick={() => {
-                // Reset form and close modal
-                setFileInfo(null);
-                setContractInfo(null);
-                setSignatureResult(null);
-                onClose();
-              }}
-              className="px-8 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-all shadow-lg"
-            >
-              ✍️ Sign Another Contract
-            </button>
-            
-            <button
-              onClick={onClose}
-              className="px-8 py-3 bg-gray-600 text-white font-semibold rounded-xl hover:bg-gray-700 transition-all shadow-lg"
-            >
-              ✅ Done
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Verify contract exists when file is uploaded
-  React.useEffect(() => {
-    let isMounted = true;
-
-    const verifyContract = async () => {
-      if (!fileInfo?.hash || !account) return;
-
-      if (isMounted) setVerifying(true);
+  // Memoized verify function to prevent infinite loops
+  const verifyContract = useCallback(async () => {
+    if (!fileInfo?.hash) {
+      setContractInfo(null);
+      return;
+    }
+    
+    console.log('🔍 Starting contract verification for hash:', fileInfo.hash);
+    
+    setVerifying(true);
+    setContractInfo(null);
+    
+    try {
+      onStatusRef.current('🔍 Verifying contract on blockchain...', 'info');
       
-      try {
-        const contractData = await checkContractExists(fileInfo.hash);
-        
-        if (!isMounted) return;
-        
-        if (contractData.exists) {
-          setContractInfo(contractData);
-          onStatus('✅ Contract found! Ready to sign.', 'success');
-        } else {
-          setContractInfo({ exists: false });
-          onStatus('❌ No contract found with this document hash', 'error');
-        }
-      } catch (error) {
-        if (!isMounted) return;
-        
-        console.error('Contract verification error:', error);
-        onStatus('❌ Error verifying contract', 'error');
+      // Use your ORIGINAL hook function
+      const result = await checkContractExists(fileInfo.hash);
+      
+      console.log('📋 Contract verification result:', result);
+      
+      if (result && result.exists) {
+        console.log('✅ Contract found, setting contract info:', result.contract);
+        setContractInfo(result.contract);
+        onStatusRef.current('✅ Contract found and verified!', 'success');
+      } else {
+        console.log('❌ Contract not found, result:', result);
         setContractInfo({ exists: false });
-      } finally {
-        if (isMounted) setVerifying(false);
+        onStatusRef.current('❌ No contract found with this document hash', 'error');
       }
-    };
+      
+    } catch (error) {
+      console.error('Contract verification error:', error);
+      onStatusRef.current(`⚠️ ${error.message}`, 'warning');
+      setContractInfo({ error: error.message });
+    } finally {
+      setVerifying(false);
+      console.log('🏁 Contract verification finished');
+    }
+  }, [fileInfo?.hash, checkContractExists]);
 
-    verifyContract();
+  // Only verify when fileInfo.hash changes, with a cleanup to prevent multiple calls
+  useEffect(() => {
+    console.log('📁 File info effect triggered:', fileInfo?.hash ? 'Hash present' : 'No hash');
+    
+    if (fileInfo?.hash) {
+      // Add a small delay to prevent rapid fire calls
+      const timeoutId = setTimeout(() => {
+        verifyContract();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      setContractInfo(null);
+      setVerifying(false);
+    }
+  }, [fileInfo?.hash]); // Removed verifyContract dependency to prevent infinite loop
 
-    return () => {
-      isMounted = false;
-    };
-  }, [fileInfo?.hash, account]);
-
-  // Handle contract signing
   const handleSign = async () => {
-    if (!fileInfo?.hash || !account) {
-      onStatus('Please upload a contract document first', 'error');
+    if (!contractInfo || !contractInfo.exists) return;
+    
+    if (!account || !account.address) {
+      onStatus('Please ensure wallet is connected', 'error');
       return;
     }
-
-    if (!contractInfo?.exists) {
-      onStatus('Contract does not exist or is not verified', 'error');
-      return;
-    }
-
+    
+    setIsSigning(true);
+    
     try {
       onStatus('🔄 Preparing to sign contract...', 'info');
 
-      // Sign the document hash with wallet
+      // Sign the contract hash with wallet
       onStatus('🔄 Please sign the document hash in your wallet...', 'info');
       const signatureResult = await signMessage(fileInfo.hash);
 
       onStatus('🔄 Creating transaction...', 'info');
-
-      // Get the injector for transaction signing
+      
+      // Get injector for signing
       const injector = await getInjector();
-
-      onStatus('🔄 Please sign the transaction in your wallet...', 'info');
-
-      // Call blockchain service
+      
+      onStatus('📝 Please sign the transaction in your wallet...', 'info');
+      
+      // Use your ORIGINAL hook function with proper signature
       await signContract(injector, account.address, fileInfo.hash, signatureResult.signature);
-
-      // Store the signature result for the modal
-      setSignatureResult(signatureResult);
-
-      // Show success modal instead of just a status message
-      setShowSuccessModal(true);
-
-      // Clear the status message since we're showing the modal
-      onStatus('', '');
-
+      
+      onStatus('✅ Contract signed successfully!', 'success');
+      
+      // Refresh contract info to show updated status
+      setTimeout(() => {
+        verifyContract();
+      }, 2000);
+      
     } catch (error) {
       console.error('Contract signing error:', error);
-      
       if (error.message.includes('Cancelled')) {
         onStatus('❌ Signing cancelled by user', 'error');
       } else if (error.message.includes('NotAuthorized')) {
@@ -311,142 +128,214 @@ const SignContract = ({ onBack, onStatus }) => {
       } else {
         onStatus(`❌ Error: ${error.message}`, 'error');
       }
+    } finally {
+      setIsSigning(false);
     }
   };
 
+  // Check if user can sign this contract
+  const canSign = contractInfo && 
+    contractInfo.exists !== false && 
+    (contractInfo.contractName || contractInfo.name || contractInfo.fileHash) && 
+    account?.address && (
+      (contractInfo.firstParty === account.address && contractInfo.status === 'Initiated') ||
+      (contractInfo.secondParty === account.address && contractInfo.status === 'FirstPartySigned')
+    );
+
   return (
-    <>
-      <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-8 shadow-glass-lg border border-white/20 animate-fadeInUp">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-gray-100">
-          <button
-            onClick={onBack}
-            disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            ← Back
-          </button>
-          <h2 className="text-3xl font-bold text-gray-800">✍️ Sign Contract</h2>
-        </div>
-
-        {/* File Upload */}
-        <div className="mb-8">
-          <FileUpload
-            onFileSelect={setFileInfo}
-            fileInfo={fileInfo}
-            disabled={loading}
-            accept=".pdf,.doc,.docx,.txt"
-            maxSize={10 * 1024 * 1024}
-          />
-        </div>
-
-        {/* Contract Verification Status */}
-        {fileInfo?.hash && (
-          <div className="mb-8">
-            {verifying ? (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <InlineSpinner className="border-blue-500" />
-                  <span className="text-blue-700 font-medium">Connecting to blockchain and verifying contract...</span>
-                </div>
-              </div>
-            ) : contractInfo ? (
-              contractInfo.exists ? (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">✅</span>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-green-800 mb-2">Contract Found!</h4>
-                      <div className="text-sm text-green-700 space-y-1">
-                        <p>• Contract status: <span className="font-medium">{contractInfo.status}</span></p>
-                        <p>• You are authorized to sign this contract</p>
-                        <p>• Document hash matches an existing contract</p>
-                        <p>• Blockchain connection established automatically</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">❌</span>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-red-800 mb-2">Contract Not Found</h4>
-                      <div className="text-sm text-red-700 space-y-1">
-                        <p>• No contract exists with this document hash</p>
-                        <p>• Make sure you uploaded the correct file</p>
-                        <p>• Check if the contract was already created</p>
-                        <p>• Blockchain connection was successful</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            ) : null}
-          </div>
-        )}
-
-        {/* Security Information */}
-        <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-          <h4 className="font-semibold text-yellow-800 mb-2">🔒 Security Notice</h4>
-          <div className="text-sm text-yellow-700 space-y-1">
-            <p>• Your signature will be cryptographically verified</p>
-            <p>• The document hash ensures file integrity</p>
-            <p>• All signing activity is recorded on the blockchain</p>
-            <p>• Only authorized parties can sign contracts</p>
-            <p>• Connection to blockchain is made securely when needed</p>
-          </div>
-        </div>
-
-        {/* Sign Button */}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center space-x-4 mb-8">
         <button
-          onClick={handleSign}
-          disabled={!fileInfo?.hash || !contractInfo?.exists || loading || verifying}
-          className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-green-700 hover:to-blue-700 transition-all hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none btn-hover-lift"
+          onClick={onBack}
+          disabled={isSigning}
+          className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
         >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <InlineSpinner />
-              Signing Contract...
-            </span>
-          ) : verifying ? (
-            <span className="flex items-center justify-center gap-2">
-              <InlineSpinner />
-              Verifying Contract...
-            </span>
-          ) : (
-            '✍️ Sign Contract'
-          )}
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
-
-        {/* Help Text */}
-        {!fileInfo?.hash && (
-          <div className="mt-6 text-center text-gray-500">
-            <p className="text-sm">
-              Upload the contract document to get started
-              <br />
-              <small className="text-xs opacity-75">
-                💡 We'll connect to the blockchain automatically when you upload a file
-              </small>
-            </p>
-          </div>
-        )}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Sign Contract</h1>
+          <p className="text-gray-600">Upload the contract document to verify and sign</p>
+        </div>
       </div>
 
-      {/* Success Modal */}
-      {showSuccessModal && signatureResult && (
-        <ContractSignSuccessModal
-          result={signatureResult}
-          contractInfo={contractInfo}
-          onClose={() => setShowSuccessModal(false)}
-          onViewContracts={() => {
-            setShowSuccessModal(false);
-            // Navigate to contracts page - you'll need to implement this navigation
-            // For now, we'll just close the modal
-          }}
-        />
-      )}
-    </>
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Left Column - File Upload */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <ModernFileUpload
+              onFileSelect={setFileInfo}
+              fileInfo={fileInfo}
+              disabled={isSigning}
+              accept=".pdf,.doc,.docx,.txt"
+              maxSize={10 * 1024 * 1024}
+              title="Contract Document"
+              description="Upload the same document used to create the contract"
+            />
+          </div>
+        </div>
+
+        {/* Right Column - Contract Verification */}
+        <div className="space-y-6">
+          {/* Connection Status Info */}
+          {!connected && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+              <p className="text-yellow-800 font-medium">⚠️ Blockchain Connection Status</p>
+              <p className="text-sm text-yellow-600 mt-1">
+                Blockchain connection is still establishing. You can upload files but signing may require a stable connection.
+              </p>
+            </div>
+          )}
+
+          {fileInfo && (
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Contract Verification</h3>
+              
+              {verifying ? (
+                <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <ModernSpinner size="md" color="blue" />
+                  <span className="text-blue-700 font-medium">Verifying contract on blockchain...</span>
+                </div>
+              ) : contractInfo ? (
+                // Check if contract exists and has the necessary data
+                (contractInfo.exists !== false && (contractInfo.contractName || contractInfo.name || contractInfo.fileHash)) ? (
+                  <div className="space-y-4">
+                    {/* Contract Found */}
+                    <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-xl border border-green-200">
+                      <CheckCircle className="w-6 h-6 text-green-600" />
+                      <div>
+                        <p className="font-medium text-green-800">Contract Found</p>
+                        <p className="text-sm text-green-600">Document verified on blockchain</p>
+                      </div>
+                    </div>
+                    
+                    {/* Contract Details */}
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                      <h4 className="font-semibold text-gray-900">Contract Information</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Name:</span>
+                          <span className="ml-2 text-gray-800 font-medium">{contractInfo.contractName || contractInfo.name}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Status:</span>
+                          <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                            contractInfo.status === 'BothPartiesSigned' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {contractInfo.status.replace(/([A-Z])/g, ' $1').trim()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Signatures:</span>
+                          <span className="ml-2 text-gray-800">{contractInfo.signatures?.length || 0} of 2</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Your Role:</span>
+                          <span className="ml-2 text-gray-800">
+                            {contractInfo.firstParty === account?.address ? 'First Party' :
+                             contractInfo.secondParty === account?.address ? 'Second Party' : 'Observer'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sign Button */}
+                    {canSign ? (
+                      <button
+                        onClick={handleSign}
+                        disabled={isSigning}
+                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 transition-all duration-200"
+                      >
+                        {isSigning ? (
+                          <span className="flex items-center justify-center space-x-2">
+                            <ModernSpinner size="sm" color="white" />
+                            <span>Signing Contract...</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center justify-center space-x-2">
+                            <PenTool className="w-5 h-5" />
+                            <span>Sign Contract</span>
+                          </span>
+                        )}
+                      </button>
+                    ) : contractInfo.status === 'BothPartiesSigned' ? (
+                      <div className="text-center p-4 bg-green-50 rounded-xl border border-green-200">
+                        <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                        <p className="text-green-800 font-medium">Contract Fully Signed</p>
+                        <p className="text-sm text-green-600">All parties have signed this contract</p>
+                      </div>
+                    ) : (
+                      <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+                        <p className="text-gray-600">You cannot sign this contract at this time</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {contractInfo.firstParty !== account?.address && contractInfo.secondParty !== account?.address
+                            ? 'You are not a party to this contract'
+                            : 'Wait for your turn to sign'
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : contractInfo.error ? (
+                  <div className="flex items-center space-x-3 p-4 bg-red-50 rounded-xl border border-red-200">
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                    <div>
+                      <p className="font-medium text-red-800">Verification Error</p>
+                      <p className="text-sm text-red-600">{contractInfo.error}</p>
+                    </div>
+                  </div>
+                ) : contractInfo.exists === false ? (
+                  <div className="flex items-center space-x-3 p-4 bg-red-50 rounded-xl border border-red-200">
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                    <div>
+                      <p className="font-medium text-red-800">Contract Not Found</p>
+                      <p className="text-sm text-red-600">No contract exists with this document hash</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-3 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                    <AlertCircle className="w-6 h-6 text-yellow-600" />
+                    <div>
+                      <p className="font-medium text-yellow-800">Unexpected Contract Data</p>
+                      <p className="text-sm text-yellow-600">
+                        Contract found but data format is unexpected. Check console for details.
+                      </p>
+                      <pre className="text-xs text-yellow-600 mt-2 bg-yellow-100 p-2 rounded">
+                        {JSON.stringify(contractInfo, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <p className="text-gray-600">Upload a contract document to verify it on the blockchain</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Instructions */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
+            <h3 className="text-lg font-semibold text-blue-800 mb-3">How to Sign</h3>
+            <div className="space-y-2 text-sm text-blue-700">
+              <p>1. Upload the exact same document used to create the contract</p>
+              <p>2. The system will verify the contract exists on the blockchain</p>
+              <p>3. If verified and it's your turn, you can sign the contract</p>
+              <p>4. Your wallet will prompt you to sign the transaction</p>
+            </div>
+          </div>
+
+          {/* Show any global errors */}
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-800 font-medium">Error: {error}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
