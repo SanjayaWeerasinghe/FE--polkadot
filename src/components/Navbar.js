@@ -1,13 +1,17 @@
 // components/ModernNavbar.js - Final Version for Your Blockchain DNC System
 import React, { useState, useRef, useEffect } from 'react';
-import { FileText, PenTool, Eye, Wallet, Shield, Globe, ChevronDown, LogOut, RefreshCw, User } from 'lucide-react';
+import { FileText, PenTool, Eye, Wallet, Shield, Globe, ChevronDown, LogOut, RefreshCw, User, Key, Settings } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const ModernNavbar = ({ currentPage, onNavigate, account, onStatus }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletDropdownOpen, setIsWalletDropdownOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const { accounts, connectWallet, switchAccount, disconnectWithGuidance, connecting, disconnecting } = useWallet();
+  const { user, isAuthenticated, isVerified, logout } = useAuth();
   const dropdownRef = useRef(null);
+  const userDropdownRef = useRef(null);
 
   const navItems = [
     { id: 'menu', label: 'Dashboard', icon: Globe },
@@ -16,11 +20,14 @@ const ModernNavbar = ({ currentPage, onNavigate, account, onStatus }) => {
     { id: 'view', label: 'My Contracts', icon: Eye }
   ];
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsWalletDropdownOpen(false);
+      }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+        setIsUserDropdownOpen(false);
       }
     };
 
@@ -62,6 +69,22 @@ const ModernNavbar = ({ currentPage, onNavigate, account, onStatus }) => {
     }
   };
 
+  // Handle user logout
+  const handleLogout = async () => {
+    try {
+      setIsUserDropdownOpen(false);
+      await logout();
+      if (onStatus) {
+        onStatus('Successfully logged out', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to logout:', error);
+      if (onStatus) {
+        onStatus('Failed to logout', 'error');
+      }
+    }
+  };
+
   return (
     <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -90,7 +113,7 @@ const ModernNavbar = ({ currentPage, onNavigate, account, onStatus }) => {
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 ${
+                  className={`px-3 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 text-sm ${
                     isActive
                       ? 'bg-blue-100 text-blue-700 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -103,14 +126,82 @@ const ModernNavbar = ({ currentPage, onNavigate, account, onStatus }) => {
             })}
           </div>
 
-          {/* Wallet Status */}
+          {/* User and Wallet Status */}
           <div className="flex items-center space-x-4">
+            {/* User Authentication Status */}
+            {isAuthenticated && isVerified ? (
+              <div className="relative" ref={userDropdownRef}>
+                <button
+                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                  className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg px-3 py-2 hover:from-purple-100 hover:to-pink-100 transition-all duration-200"
+                >
+                  <div className="flex items-center space-x-2">
+                    <User className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm font-medium text-purple-800">
+                      {user?.email?.split('@')[0] || 'User'}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-purple-600 transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+
+                {/* User Dropdown */}
+                {isUserDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-200 py-2 z-50">
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                          <User className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">
+                            {user?.email?.split('@')[0] || 'User'}
+                          </p>
+                          <p className="text-xs text-gray-500">{user?.email}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="px-2 py-2 space-y-1">
+                      <button
+                        onClick={() => {
+                          setIsUserDropdownOpen(false);
+                          onNavigate('publicKeys');
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors flex items-center space-x-3"
+                      >
+                        <Key className="w-4 h-4 text-gray-500" />
+                        <span>Manage Keys</span>
+                      </button>
+                      
+                      <button
+                        onClick={handleLogout}
+                        className="w-full px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center space-x-3"
+                      >
+                        <LogOut className="w-4 h-4 text-red-500" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => onNavigate('login')}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-2 rounded-lg font-medium hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-sm"
+              >
+                <User className="w-4 h-4" />
+                <span>Login</span>
+              </button>
+            )}
+
             {account ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsWalletDropdownOpen(!isWalletDropdownOpen)}
                   disabled={connecting || disconnecting}
-                  className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl px-4 py-2 hover:from-green-100 hover:to-emerald-100 transition-all duration-200 disabled:opacity-50"
+                  className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg px-3 py-2 hover:from-green-100 hover:to-emerald-100 transition-all duration-200 disabled:opacity-50"
                 >
                   <div className="flex items-center space-x-2">
                     <Wallet className="w-4 h-4 text-green-600" />
@@ -196,7 +287,7 @@ const ModernNavbar = ({ currentPage, onNavigate, account, onStatus }) => {
               <button 
                 onClick={handleConnect}
                 disabled={connecting}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-2 rounded-lg font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center space-x-2 text-sm"
               >
                 {connecting && <RefreshCw className="w-4 h-4 animate-spin" />}
                 <span>{connecting ? 'Connecting...' : 'Connect Wallet'}</span>
@@ -243,6 +334,64 @@ const ModernNavbar = ({ currentPage, onNavigate, account, onStatus }) => {
                 );
               })}
               
+              {/* Mobile User Authentication */}
+              <div className="border-t border-gray-200 pt-2 mt-2">
+                {isAuthenticated && isVerified ? (
+                  <>
+                    {/* Current User Info */}
+                    <div className="px-3 py-2 mb-2">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <User className="w-4 h-4 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {user?.email?.split('@')[0] || 'User'}
+                          </p>
+                          <p className="text-xs text-gray-500">{user?.email}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* User Actions */}
+                    <div className="space-y-1 mb-2">
+                      <button
+                        onClick={() => {
+                          onNavigate('publicKeys');
+                          setIsMenuOpen(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors flex items-center space-x-3"
+                      >
+                        <Key className="w-4 h-4 text-gray-500" />
+                        <span>Manage Keys</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center space-x-3"
+                      >
+                        <LogOut className="w-4 h-4 text-red-500" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      onNavigate('login');
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 mb-2"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>Login</span>
+                  </button>
+                )}
+              </div>
+
               {/* Mobile Wallet Management */}
               <div className="border-t border-gray-200 pt-2 mt-2">
                 {account ? (

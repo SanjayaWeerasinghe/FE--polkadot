@@ -1,8 +1,12 @@
 // pages/ModernDashboard.js
 import React from 'react';
-import { ChevronRight, FileText, PenTool, Eye, Shield, Link, Users, Upload } from 'lucide-react';
+import { ChevronRight, FileText, PenTool, Eye, Shield, Link, Users, Upload, User, Key } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useWallet } from '../contexts/WalletContext';
 
 const ModernDashboard = ({ onNavigate }) => {
+  const { isAuthenticated, isVerified, user, canUsePublicKey } = useAuth();
+  const { account } = useWallet();
   const features = [
     {
       id: 'initiate',
@@ -42,8 +46,94 @@ const ModernDashboard = ({ onNavigate }) => {
     { label: 'Parties', value: '3-Party', icon: Users }
   ];
 
+  // Get the appropriate call-to-action based on authentication state
+  const getCallToAction = () => {
+    if (!isAuthenticated) {
+      return {
+        text: 'Login to Get Started',
+        action: () => onNavigate('login'),
+        gradient: 'from-purple-600 to-pink-600',
+        icon: User
+      };
+    }
+
+    if (!isVerified) {
+      return {
+        text: 'Verify Your Email',
+        action: () => onNavigate('login'),
+        gradient: 'from-yellow-600 to-orange-600',
+        icon: User
+      };
+    }
+
+    if (!account) {
+      return {
+        text: 'Connect Your Wallet',
+        action: () => {}, // Wallet connection handled by navbar
+        gradient: 'from-green-600 to-teal-600',
+        icon: Key
+      };
+    }
+
+    if (account && !canUsePublicKey(account.address)) {
+      return {
+        text: 'Add Wallet Address',
+        action: () => onNavigate('publicKeys'),
+        gradient: 'from-blue-600 to-indigo-600',
+        icon: Key
+      };
+    }
+
+    return {
+      text: 'Create Your First Contract',
+      action: () => onNavigate('initiate'),
+      gradient: 'from-blue-600 to-purple-600',
+      icon: FileText
+    };
+  };
+
+  const callToAction = getCallToAction();
+
   return (
     <div className="space-y-8">
+      {/* Status Banner */}
+      {isAuthenticated && isVerified && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <User className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-green-900">
+                  Welcome back, {user?.email?.split('@')[0] || 'User'}!
+                </h3>
+                <div className="flex items-center space-x-4 text-sm text-green-700">
+                  <span>✓ Email verified</span>
+                  {account ? (
+                    canUsePublicKey(account.address) ? (
+                      <span>✓ Wallet connected & registered</span>
+                    ) : (
+                      <span className="text-yellow-700">⚠ Wallet not registered</span>
+                    )
+                  ) : (
+                    <span className="text-yellow-700">⚠ Wallet not connected</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            {account && !canUsePublicKey(account.address) && (
+              <button
+                onClick={() => onNavigate('publicKeys')}
+                className="bg-green-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-green-700 transition-colors"
+              >
+                Add Wallet Address
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50 rounded-3xl p-8 md:p-12 border border-gray-200/50">
         <div className="relative z-10">
@@ -75,10 +165,11 @@ const ModernDashboard = ({ onNavigate }) => {
             </div>
 
             <button 
-              onClick={() => onNavigate('initiate')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 inline-flex items-center space-x-2"
+              onClick={callToAction.action}
+              className={`bg-gradient-to-r ${callToAction.gradient} text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 inline-flex items-center space-x-2`}
             >
-              <span>Get Started</span>
+              <callToAction.icon className="w-5 h-5" />
+              <span>{callToAction.text}</span>
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>

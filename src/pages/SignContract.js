@@ -104,32 +104,12 @@ const SignContract = ({ onBack, onStatus }) => {
       // Get injector for signing
       const injector = await getInjector();
       
-      onStatus('📝 Please sign the transaction in your wallet...', 'info');
+      onStatus('🔄 Please sign the transaction in your wallet...', 'info');
       
-      // Use your ORIGINAL hook function with proper signature
-      const signResult = await signContract(injector, account.address, fileInfo.hash, signatureResult.signature);
+      // Use the exact same implementation as ViewContracts (which works)
+      await signContract(injector, account.address, fileInfo.hash, signatureResult.signature);
       
-      onStatus('🔄 Saving signed contract file to secure storage...', 'loading');
-      
-      try {
-        // Save the signed contract file to backend
-        const backendResult = await fileUploadService.uploadFile(
-          fileInfo.file, // The original file from form
-          {
-            contractId: contractInfo?.contractId || 'signed',
-            contractHash: signResult?.txHash || fileInfo.hash,
-            contractName: contractInfo?.contractName || contractInfo?.name || 'Signed Contract',
-            signatureHash: signResult?.txHash
-          }
-        );
-        
-        console.log('Signed file saved to backend:', backendResult);
-        onStatus('✅ Contract signed and file saved successfully!', 'success');
-        
-      } catch (backendError) {
-        console.error('Backend save error after signing:', backendError);
-        onStatus('⚠️ Contract signed successfully, but file save failed', 'warning');
-      }
+      onStatus('🎉 Contract signed successfully!', 'success');
       
       // Refresh contract info to show updated status
       setTimeout(() => {
