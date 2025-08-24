@@ -1,7 +1,56 @@
 // components/ModernContractForm.js
-import React, { useState } from 'react';
-import { ArrowLeft, Users, FileText, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Users, FileText, Shield, AlertCircle, CheckCircle, User, ChevronDown, UserCheck, Search, Star, Clock, RefreshCw } from 'lucide-react';
 import ModernFileUpload from './FileUpload';
+import { useAuth } from '../contexts/AuthContext';
+import userService from '../services/userService';
+
+// Enhanced User Option Component
+const UserOption = ({ user, onSelect, onToggleFavorite, isFavorite, isSelected }) => {
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation(); // Prevent selection when clicking favorite
+    onToggleFavorite();
+  };
+
+  return (
+    <div
+      className={`flex items-center space-x-3 px-4 py-3 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
+        isSelected ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
+      }`}
+      onClick={onSelect}
+    >
+      {/* Online Status */}
+      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+        user.isOnline ? 'bg-green-500' : 'bg-gray-400'
+      }`}></div>
+      
+      {/* User Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm font-medium text-gray-900 truncate">{user.name}</span>
+          {isFavorite && <Star className="w-3 h-3 text-yellow-500 fill-current flex-shrink-0" />}
+        </div>
+        <div className="text-xs text-gray-500 truncate">{user.email}</div>
+        <div className="text-xs text-gray-400 font-mono truncate">
+          {user.primaryAddress.slice(0, 8)}...{user.primaryAddress.slice(-8)}
+        </div>
+      </div>
+      
+      {/* Favorite Button */}
+      <button
+        onClick={handleFavoriteClick}
+        className={`p-1 rounded-lg transition-colors flex-shrink-0 ${
+          isFavorite 
+            ? 'text-yellow-500 hover:text-yellow-600' 
+            : 'text-gray-300 hover:text-yellow-400'
+        }`}
+        title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+      >
+        <Star className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+      </button>
+    </div>
+  );
+};
 
 const ModernContractForm = ({ 
   onBack, 
@@ -11,37 +60,329 @@ const ModernContractForm = ({
   initialData = {},
   onFileValidate = null // Optional file validation function
 }) => {
+  const { user, publicKeys } = useAuth();
   const [fileInfo, setFileInfo] = useState(null);
   const [fileValidationState, setFileValidationState] = useState({
     validating: false,
     error: null,
     exists: false
   });
+  
+  // Enhanced form data with party role selection
   const [formData, setFormData] = useState({
     contractName: '',
-    firstParty: account?.address || '',
+    initiatorRole: 'firstParty', // Which party role the initiator takes
+    firstParty: '',
     secondParty: '',
     thirdParty: '',
     metadata: '',
     ...initialData
   });
+  
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [recentContacts, setRecentContacts] = useState([]);
+  const [favoriteUsers, setFavoriteUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [dropdownStates, setDropdownStates] = useState({
+    firstParty: false,
+    secondParty: false,
+    thirdParty: false
+  });
+  const [searchTerms, setSearchTerms] = useState({
+    firstParty: '',
+    secondParty: '',
+    thirdParty: ''
+  });
+  const [selectedUserIndex, setSelectedUserIndex] = useState({
+    firstParty: -1,
+    secondParty: -1,
+    thirdParty: -1
+  });
+  
+  // Refs for keyboard navigation
+  const searchInputRefs = useRef({
+    firstParty: null,
+    secondParty: null,
+    thirdParty: null
+  });
+  
+  // Get primary wallet address for current user
+  const currentUserAddress = publicKeys.length > 0 ? publicKeys[0] : account?.address || '';
+  
+  // Initialize form with correct addresses based on initiator role
+  useEffect(() => {
+    if (currentUserAddress) {
+      setFormData(prev => ({
+        ...prev,
+        [prev.initiatorRole]: currentUserAddress
+      }));
+    }
+  }, [currentUserAddress, formData.initiatorRole]);
+  
+  // Load available users and contacts
+  useEffect(() => {
+    const loadUsersAndContacts = async () => {
+      try {
+        setUsersLoading(true);
+        console.log('🔄 Loading users and contacts from backend...');
+        
+        // Load all users and recent contacts in parallel
+        const [users, contacts] = await Promise.all([
+          userService.getAllUsers(),
+          userService.getUserContacts()
+        ]);
+        
+        console.log(`📊 Loaded ${users.length} users and ${contacts.length} recent contacts`);
+        setAvailableUsers(users);
+        setRecentContacts(contacts.slice(0, 5)); // Show top 5 recent contacts
+        
+        // Load favorites from localStorage
+        const savedFavorites = localStorage.getItem('contractUserFavorites');
+        if (savedFavorites) {
+          const favoriteIds = JSON.parse(savedFavorites);
+          const favorites = users.filter(user => favoriteIds.includes(user.id));
+          setFavoriteUsers(favorites);
+        }
+        
+        if (users.length === 0) {
+          console.log('💭 No verified users found - only manual address entry available');
+        }
+      } catch (error) {
+        console.error('❌ Failed to load users and contacts:', error);
+        setAvailableUsers([]);
+        setRecentContacts([]);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+    
+    loadUsersAndContacts();
+  }, []);
+  
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.dropdown-container')) {
+        setDropdownStates({ firstParty: false, secondParty: false, thirdParty: false });
+      }
+    };
 
-  // Validation rules
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Enhanced validation rules
   const validateField = (name, value) => {
     switch (name) {
       case 'contractName':
         return value.length < 3 ? 'Contract name must be at least 3 characters' : '';
+      case 'firstParty':
       case 'secondParty':
-        return !value ? 'Second party address is required' : 
-               value.length < 47 ? 'Invalid Substrate address format' : '';
       case 'thirdParty':
-        return !value ? 'Notary address is required' : 
-               value.length < 47 ? 'Invalid Substrate address format' : '';
+        if (!value) return `${name.charAt(0).toUpperCase() + name.slice(1).replace('Party', ' party')} address is required`;
+        if (value.length < 47) return 'Invalid Substrate address format';
+        
+        // Check for duplicate addresses
+        const otherParties = [formData.firstParty, formData.secondParty, formData.thirdParty].filter(addr => addr && addr !== value);
+        if (otherParties.includes(value)) {
+          return 'Each party must have a unique address';
+        }
+        
+        return '';
       default:
         return '';
     }
+  };
+  
+  // Handle initiator role change
+  const handleInitiatorRoleChange = (newRole) => {
+    const oldRole = formData.initiatorRole;
+    const currentAddress = formData[oldRole];
+    
+    setFormData(prev => ({
+      ...prev,
+      initiatorRole: newRole,
+      [oldRole]: '', // Clear old role
+      [newRole]: currentUserAddress // Set new role to current user
+    }));
+  };
+  
+  // Handle "As Me" button click
+  const handleAsMe = (partyType) => {
+    if (formData.initiatorRole !== partyType) {
+      handleInitiatorRoleChange(partyType);
+    }
+  };
+  
+  // Handle user selection from dropdown
+  const handleUserSelect = (partyType, user) => {
+    handleInputChange(partyType, user.primaryAddress);
+    setDropdownStates(prev => ({ ...prev, [partyType]: false }));
+    setSearchTerms(prev => ({ ...prev, [partyType]: '' }));
+    setSelectedUserIndex(prev => ({ ...prev, [partyType]: -1 }));
+    
+    // Add to recent contacts (in production, this would be an API call)
+    addToRecentContacts(user);
+  };
+  
+  // Add user to recent contacts
+  const addToRecentContacts = (user) => {
+    setRecentContacts(prev => {
+      const filtered = prev.filter(contact => contact.id !== user.id);
+      return [user, ...filtered].slice(0, 5); // Keep max 5 recent
+    });
+  };
+  
+  // Toggle user favorite status
+  const toggleFavorite = (user) => {
+    const isFavorite = favoriteUsers.some(fav => fav.id === user.id);
+    let newFavorites;
+    
+    if (isFavorite) {
+      newFavorites = favoriteUsers.filter(fav => fav.id !== user.id);
+    } else {
+      newFavorites = [...favoriteUsers, user];
+    }
+    
+    setFavoriteUsers(newFavorites);
+    
+    // Save to localStorage
+    const favoriteIds = newFavorites.map(fav => fav.id);
+    localStorage.setItem('contractUserFavorites', JSON.stringify(favoriteIds));
+  };
+  
+  // Handle search input
+  const handleSearchChange = (partyType, searchTerm) => {
+    setSearchTerms(prev => ({ ...prev, [partyType]: searchTerm }));
+    setSelectedUserIndex(prev => ({ ...prev, [partyType]: -1 }));
+  };
+  
+  // Filter users based on search term
+  const getFilteredUsers = (partyType) => {
+    const searchTerm = searchTerms[partyType].toLowerCase();
+    const allUsers = availableUsers.filter(user => user.primaryAddress !== currentUserAddress);
+    
+    if (!searchTerm) {
+      // No search term - return categorized users
+      const favorites = favoriteUsers.filter(user => user.primaryAddress !== currentUserAddress);
+      const recent = recentContacts.filter(user => 
+        user.primaryAddress !== currentUserAddress && 
+        !favorites.some(fav => fav.id === user.id)
+      );
+      const others = allUsers.filter(user => 
+        !favorites.some(fav => fav.id === user.id) &&
+        !recent.some(rec => rec.id === user.id)
+      );
+      
+      return { favorites, recent, others, hasSearch: false };
+    }
+    
+    // Filter all users by search term
+    const filtered = allUsers.filter(user => 
+      user.name.toLowerCase().includes(searchTerm) ||
+      user.email.toLowerCase().includes(searchTerm) ||
+      user.primaryAddress.toLowerCase().includes(searchTerm)
+    );
+    
+    return { filtered, hasSearch: true };
+  };
+  
+  // Handle keyboard navigation
+  const handleKeyDown = (e, partyType) => {
+    const { filtered, favorites, recent, others, hasSearch } = getFilteredUsers(partyType);
+    const allFilteredUsers = hasSearch ? filtered : [...favorites, ...recent, ...others];
+    const currentIndex = selectedUserIndex[partyType];
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextIndex = currentIndex < allFilteredUsers.length - 1 ? currentIndex + 1 : 0;
+      setSelectedUserIndex(prev => ({ ...prev, [partyType]: nextIndex }));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : allFilteredUsers.length - 1;
+      setSelectedUserIndex(prev => ({ ...prev, [partyType]: prevIndex }));
+    } else if (e.key === 'Enter' && currentIndex >= 0) {
+      e.preventDefault();
+      const selectedUser = allFilteredUsers[currentIndex];
+      if (selectedUser) {
+        handleUserSelect(partyType, selectedUser);
+      }
+    } else if (e.key === 'Escape') {
+      setDropdownStates(prev => ({ ...prev, [partyType]: false }));
+      setSelectedUserIndex(prev => ({ ...prev, [partyType]: -1 }));
+    }
+  };
+  
+  // Toggle dropdown
+  const toggleDropdown = (partyType) => {
+    const isOpening = !dropdownStates[partyType];
+    setDropdownStates(prev => ({ ...prev, [partyType]: !prev[partyType] }));
+    
+    if (isOpening) {
+      // Focus search input when opening
+      setTimeout(() => {
+        if (searchInputRefs.current[partyType]) {
+          searchInputRefs.current[partyType].focus();
+        }
+      }, 100);
+    } else {
+      // Reset search when closing
+      setSearchTerms(prev => ({ ...prev, [partyType]: '' }));
+      setSelectedUserIndex(prev => ({ ...prev, [partyType]: -1 }));
+    }
+  };
+  
+  // Refresh users list
+  const refreshUsers = async () => {
+    try {
+      setUsersLoading(true);
+      console.log('🔄 Refreshing users and contacts...');
+      const [users, contacts] = await Promise.all([
+        userService.getAllUsers(),
+        userService.getUserContacts()
+      ]);
+      setAvailableUsers(users);
+      setRecentContacts(contacts.slice(0, 5));
+      console.log(`✅ Refreshed ${users.length} users and ${contacts.length} contacts`);
+    } catch (error) {
+      console.error('❌ Failed to refresh users:', error);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+  
+  // Get role label
+  const getRoleLabel = (partyType) => {
+    const labels = {
+      firstParty: 'First Party',
+      secondParty: 'Second Party', 
+      thirdParty: 'Third Party (Notary)'
+    };
+    return labels[partyType] || partyType;
+  };
+  
+  // Get role description
+  const getRoleDescription = (partyType) => {
+    const descriptions = {
+      firstParty: 'Primary signatory of the contract',
+      secondParty: 'Counterparty who agrees to contract terms',
+      thirdParty: 'Trusted witness for contract validation'
+    };
+    return descriptions[partyType] || '';
+  };
+  
+  // Format address display
+  const formatUserDisplay = (address) => {
+    if (!address) return '';
+    const user = availableUsers.find(u => u.primaryAddress === address);
+    if (user) {
+      return `${user.name} (${formatAddress(address)})`;
+    }
+    return formatAddress(address);
   };
 
   const handleInputChange = (name, value) => {
@@ -136,11 +477,13 @@ const ModernContractForm = ({
       return;
     }
 
-    // Call parent submit handler
+    // Call parent submit handler with enhanced data
     if (onSubmit) {
       await onSubmit({
         ...formData,
-        fileInfo
+        fileInfo,
+        initiatorAddress: currentUserAddress,
+        initiatorRole: formData.initiatorRole
       });
     }
   };
@@ -148,6 +491,7 @@ const ModernContractForm = ({
   const isFormValid = !Object.values(errors).some(error => error) && 
                      fileInfo && 
                      formData.contractName &&
+                     formData.firstParty &&
                      formData.secondParty &&
                      formData.thirdParty &&
                      !fileValidationState.validating &&  // Don't allow submit during validation
@@ -211,80 +555,260 @@ const ModernContractForm = ({
                 )}
               </div>
 
-              {/* First Party (Current User) */}
+              {/* Initiator Role Selection */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  First Party (You)
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Your Role in this Contract *
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={formData.firstParty}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-600 pr-12"
-                    disabled
-                  />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  </div>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {['firstParty', 'secondParty', 'thirdParty'].map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => handleInitiatorRoleChange(role)}
+                      className={`p-3 rounded-xl border-2 transition-all ${
+                        formData.initiatorRole === role
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                      }`}
+                      disabled={loading}
+                    >
+                      <div className="text-center">
+                        <div className="text-sm font-medium">{getRoleLabel(role)}</div>
+                        <div className="text-xs mt-1 opacity-75">
+                          {role === 'firstParty' ? 'Primary' : role === 'secondParty' ? 'Counter' : 'Notary'}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Your wallet address: {formatAddress(formData.firstParty)}
-                </p>
               </div>
-
-              {/* Second Party */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Second Party Address *
-                </label>
-                <input
-                  type="text"
-                  value={formData.secondParty}
-                  onChange={(e) => handleInputChange('secondParty', e.target.value)}
-                  onBlur={() => handleBlur('secondParty')}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm ${
-                    errors.secondParty ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
-                  placeholder="5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
-                  disabled={loading}
-                />
-                {errors.secondParty && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                    <span className="text-sm text-red-600">{errors.secondParty}</span>
+              
+              {/* Dynamic Party Fields */}
+              {['firstParty', 'secondParty', 'thirdParty'].map((partyType) => {
+                const isCurrentUser = formData.initiatorRole === partyType;
+                return (
+                  <div key={partyType}>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-900">
+                        {getRoleLabel(partyType)} {isCurrentUser ? '(You)' : '*'}
+                      </label>
+                      {!isCurrentUser && (
+                        <button
+                          type="button"
+                          onClick={() => handleAsMe(partyType)}
+                          className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-200 transition-colors"
+                          disabled={loading}
+                        >
+                          As Me
+                        </button>
+                      )}
+                    </div>
+                    
+                    {isCurrentUser ? (
+                      /* Current User Field */
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={formData[partyType]}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-green-50 text-green-700 pr-12 font-mono text-sm"
+                          disabled
+                        />
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <UserCheck className="w-5 h-5 text-green-500" />
+                        </div>
+                      </div>
+                    ) : (
+                      /* Other Party Field with Dropdown */
+                      <div className="relative dropdown-container">
+                        <input
+                          type="text"
+                          value={formData[partyType]}
+                          onChange={(e) => handleInputChange(partyType, e.target.value)}
+                          onBlur={() => handleBlur(partyType)}
+                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm pr-12 ${
+                            errors[partyType] ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder="Enter address or select user"
+                          disabled={loading}
+                        />
+                        
+                        {/* Dropdown Button */}
+                        <button
+                          type="button"
+                          onClick={() => toggleDropdown(partyType)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          disabled={loading}
+                        >
+                          <ChevronDown className={`w-5 h-5 transition-transform ${
+                            dropdownStates[partyType] ? 'rotate-180' : ''
+                          }`} />
+                        </button>
+                        
+                        {/* Enhanced Dropdown Menu */}
+                        {dropdownStates[partyType] && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-hidden">
+                            {/* Search Header */}
+                            <div className="p-3 border-b border-gray-100 bg-gray-50">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                  ref={el => searchInputRefs.current[partyType] = el}
+                                  type="text"
+                                  value={searchTerms[partyType]}
+                                  onChange={(e) => handleSearchChange(partyType, e.target.value)}
+                                  onKeyDown={(e) => handleKeyDown(e, partyType)}
+                                  className="w-full pl-10 pr-10 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Search users..."
+                                  disabled={usersLoading}
+                                />
+                                <button
+                                  onClick={refreshUsers}
+                                  disabled={usersLoading}
+                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                                  title="Refresh users"
+                                >
+                                  <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
+                                </button>
+                              </div>
+                            </div>
+                            
+                            {/* User List */}
+                            <div className="max-h-64 overflow-y-auto">
+                              {usersLoading ? (
+                                <div className="px-4 py-6 text-sm text-gray-500 text-center flex items-center justify-center space-x-2">
+                                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                  <span>Loading users...</span>
+                                </div>
+                              ) : (() => {
+                                const { filtered, favorites, recent, others, hasSearch } = getFilteredUsers(partyType);
+                                const allUsers = hasSearch ? filtered : [...favorites, ...recent, ...others];
+                                
+                                if (allUsers.length === 0) {
+                                  return (
+                                    <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                                      {hasSearch ? (
+                                        <div>
+                                          <div className="mb-2">No users match "{searchTerms[partyType]}"</div>
+                                          <div className="text-xs text-gray-400">Try a different search term</div>
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          <div className="mb-2">No other users available</div>
+                                          <div className="text-xs text-gray-400">Enter address manually above</div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                
+                                return (
+                                  <div>
+                                    {hasSearch ? (
+                                      /* Search Results */
+                                      filtered.map((user, index) => (
+                                        <UserOption
+                                          key={user.id}
+                                          user={user}
+                                          onSelect={() => handleUserSelect(partyType, user)}
+                                          onToggleFavorite={() => toggleFavorite(user)}
+                                          isFavorite={favoriteUsers.some(fav => fav.id === user.id)}
+                                          isSelected={selectedUserIndex[partyType] === index}
+                                        />
+                                      ))
+                                    ) : (
+                                      /* Categorized Results */
+                                      <div>
+                                        {favorites.length > 0 && (
+                                          <div>
+                                            <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-100">
+                                              ⭐ Favorites
+                                            </div>
+                                            {favorites.map((user, index) => (
+                                              <UserOption
+                                                key={user.id}
+                                                user={user}
+                                                onSelect={() => handleUserSelect(partyType, user)}
+                                                onToggleFavorite={() => toggleFavorite(user)}
+                                                isFavorite={true}
+                                                isSelected={selectedUserIndex[partyType] === index}
+                                              />
+                                            ))}
+                                          </div>
+                                        )}
+                                        
+                                        {recent.length > 0 && (
+                                          <div>
+                                            <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-100">
+                                              🕐 Recent
+                                            </div>
+                                            {recent.map((user, index) => (
+                                              <UserOption
+                                                key={user.id}
+                                                user={user}
+                                                onSelect={() => handleUserSelect(partyType, user)}
+                                                onToggleFavorite={() => toggleFavorite(user)}
+                                                isFavorite={favoriteUsers.some(fav => fav.id === user.id)}
+                                                isSelected={selectedUserIndex[partyType] === (favorites.length + index)}
+                                              />
+                                            ))}
+                                          </div>
+                                        )}
+                                        
+                                        {others.length > 0 && (
+                                          <div>
+                                            {(favorites.length > 0 || recent.length > 0) && (
+                                              <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-100">
+                                                👥 All Users
+                                              </div>
+                                            )}
+                                            {others.map((user, index) => (
+                                              <UserOption
+                                                key={user.id}
+                                                user={user}
+                                                onSelect={() => handleUserSelect(partyType, user)}
+                                                onToggleFavorite={() => toggleFavorite(user)}
+                                                isFavorite={favoriteUsers.some(fav => fav.id === user.id)}
+                                                isSelected={selectedUserIndex[partyType] === (favorites.length + recent.length + index)}
+                                              />
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                            
+                            {/* Footer with keyboard shortcuts */}
+                            <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+                              <div className="flex items-center justify-between">
+                                <span>🔍 Type to search • ⭐ Click star to favorite</span>
+                                <span>↑↓ Navigate • ⏎ Select • Esc Close</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {errors[partyType] && (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <AlertCircle className="w-4 h-4 text-red-500" />
+                        <span className="text-sm text-red-600">{errors[partyType]}</span>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-gray-500 mt-1">
+                      {isCurrentUser ? 
+                        `Your primary wallet: ${formatAddress(currentUserAddress)}` : 
+                        getRoleDescription(partyType)
+                      }
+                    </p>
                   </div>
-                )}
-                <p className="text-xs text-gray-500 mt-1">
-                  The counterparty who will sign this contract
-                </p>
-              </div>
-
-              {/* Third Party (Notary) */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Notary (Third Party) Address *
-                </label>
-                <input
-                  type="text"
-                  value={formData.thirdParty}
-                  onChange={(e) => handleInputChange('thirdParty', e.target.value)}
-                  onBlur={() => handleBlur('thirdParty')}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm ${
-                    errors.thirdParty ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
-                  placeholder="5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y"
-                  disabled={loading}
-                />
-                {errors.thirdParty && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                    <span className="text-sm text-red-600">{errors.thirdParty}</span>
-                  </div>
-                )}
-                <p className="text-xs text-gray-500 mt-1">
-                  The trusted third party who will notarize this contract
-                </p>
-              </div>
+                );
+              })}
 
               {/* Additional Metadata */}
               <div>
@@ -325,35 +849,77 @@ const ModernContractForm = ({
             </form>
           </div>
 
-          {/* Party Information Card */}
+          {/* Enhanced Party Information Card */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
                 <Users className="w-5 h-5 text-blue-600" />
               </div>
-              <h3 className="text-lg font-semibold text-blue-800">Three-Party System</h3>
+              <h3 className="text-lg font-semibold text-blue-800">Contract Parties</h3>
             </div>
+            
+            {/* Current Role Display */}
+            <div className="mb-4 p-3 bg-white/50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-1">
+                <UserCheck className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-blue-800">
+                  You are the {getRoleLabel(formData.initiatorRole)}
+                </span>
+              </div>
+              <p className="text-xs text-blue-600 ml-6">
+                {getRoleDescription(formData.initiatorRole)}
+              </p>
+            </div>
+            
             <div className="space-y-3 text-sm">
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-medium text-blue-800">First Party (You)</p>
-                  <p className="text-blue-600">Contract initiator and primary signatory</p>
-                </div>
+              {['firstParty', 'secondParty', 'thirdParty'].map((partyType) => {
+                const isYou = formData.initiatorRole === partyType;
+                const hasAddress = formData[partyType];
+                
+                return (
+                  <div key={partyType} className="flex items-start space-x-3">
+                    <div className={`w-2 h-2 rounded-full mt-2 ${
+                      partyType === 'firstParty' ? 'bg-blue-500' :
+                      partyType === 'secondParty' ? 'bg-purple-500' : 'bg-green-500'
+                    }`}></div>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <p className="font-medium text-blue-800">
+                          {getRoleLabel(partyType)}
+                          {isYou && ' (You)'}
+                        </p>
+                        {hasAddress && (
+                          <CheckCircle className="w-3 h-3 text-green-500" />
+                        )}
+                      </div>
+                      <p className="text-blue-600 text-xs">{getRoleDescription(partyType)}</p>
+                      {hasAddress && (
+                        <p className="text-blue-500 text-xs font-mono mt-1">
+                          {formatUserDisplay(formData[partyType])}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* User Stats & Tips */}
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between text-xs text-blue-700">
+                <span>👥 {availableUsers.length} registered users</span>
+                <span>⭐ {favoriteUsers.length} favorites</span>
+                <span>🕒 {recentContacts.length} recent</span>
               </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-medium text-blue-800">Second Party</p>
-                  <p className="text-blue-600">Counterparty who agrees to contract terms</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-medium text-blue-800">Notary (Third Party)</p>
-                  <p className="text-blue-600">Trusted witness for contract validation</p>
-                </div>
+              
+              <div className="p-3 bg-white/30 rounded-lg">
+                <p className="text-xs font-medium text-blue-800 mb-1">💡 Quick Tips:</p>
+                <ul className="text-xs text-blue-700 space-y-1">
+                  <li>• Click "As Me" to switch your role in the contract</li>
+                  <li>• Search users by name, email, or address</li>
+                  <li>• ⭐ Star users to add them to favorites</li>
+                  <li>• Recent contacts appear at the top</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -431,8 +997,8 @@ const ModernContractForm = ({
                     <p className="text-sm text-green-600">{(fileInfo.size / (1024 * 1024)).toFixed(2)} MB</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-green-700">Parties:</span>
-                    <p className="text-sm text-green-600">3 parties specified</p>
+                    <span className="text-sm font-medium text-green-700">Your Role:</span>
+                    <p className="text-sm text-green-600">{getRoleLabel(formData.initiatorRole)}</p>
                   </div>
                 </div>
                 <div className="pt-3 border-t border-green-200">

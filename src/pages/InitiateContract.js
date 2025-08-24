@@ -67,9 +67,10 @@ const InitiateContract = ({ onBack, onStatus }) => {
       onStatus('🖊️ Please sign the transaction in your wallet...', 'info');
       
       // Use your ORIGINAL hook function with EXACT parameter order
+      // Note: The initiator can now be any party (1st, 2nd, or 3rd) based on their selection
       const result = await initiateContract(
         injector,                              // injector
-        account.address,                       // accountAddress  
+        formData.initiatorAddress,             // accountAddress (the actual signing address)
         formData.fileInfo.hash,               // fileHash
         formData.firstParty.trim(),           // firstParty
         formData.secondParty.trim(),          // secondParty
