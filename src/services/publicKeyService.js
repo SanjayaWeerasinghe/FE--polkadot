@@ -1,7 +1,7 @@
 // services/publicKeyService.js
 import authService from './authService';
 
-const API_BASE_URL = 'http://localhost:3000/api/public-keys';
+const API_BASE_URL = `${process.env.REACT_APP_UPLOAD_API_URL}/public-keys`;
 
 class PublicKeyService {
   constructor() {

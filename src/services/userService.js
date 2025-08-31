@@ -1,5 +1,5 @@
 // services/userService.js - User management service
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = process.env.REACT_APP_UPLOAD_API_URL;
 
 class UserService {
   constructor() {
