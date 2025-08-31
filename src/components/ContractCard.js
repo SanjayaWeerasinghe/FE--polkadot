@@ -47,6 +47,22 @@ const ModernContractCard = ({
   const canDeactivate = (isFirstParty || isSecondParty) && 
     !['Deactivated', 'BothPartiesSigned', 'Completed'].includes(contract.status);
 
+  const getStatusBgColor = (status) => {
+    switch (status) {
+      case 'BothPartiesSigned':
+      case 'Completed':
+        return 'var(--success)';
+      case 'FirstPartySigned':
+        return 'var(--warning)';
+      case 'Initiated':
+        return 'var(--success)';
+      case 'Deactivated':
+        return 'var(--text-muted)';
+      default:
+        return 'var(--success)';
+    }
+  };
+
   const getStatusConfig = (status) => {
     const configs = {
       'BothPartiesSigned': {
@@ -127,29 +143,29 @@ const ModernContractCard = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+    <div className="glass-card-dark rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" style={{border: '1px solid var(--border-primary)', color: 'var(--text-primary)'}}>
       {/* Header */}
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-6 border-b" style={{borderColor: 'var(--border-primary)'}}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-2">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--success-bg)'}}>
+                <FileText className="w-5 h-5" style={{color: 'var(--success)'}} />
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">{contract.contractName || contract.name || 'Untitled Contract'}</h3>
-                <p className="text-sm text-gray-500">Your role: {userRole}</p>
+                <h3 className="text-xl font-semibold" style={{color: 'var(--text-primary)'}}>{contract.contractName || contract.name || 'Untitled Contract'}</h3>
+                <p className="text-sm" style={{color: 'var(--text-secondary)'}}>Your role: {userRole}</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className={`px-3 py-1 rounded-full text-xs font-medium border ${statusConfig.color} flex items-center space-x-1`}>
+              <div className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center space-x-1`} style={{backgroundColor: getStatusBgColor(contract.status), color: 'var(--text-primary)', borderColor: 'var(--border-primary)'}}>
                 <StatusIcon className="w-3 h-3" />
                 <span>{statusConfig.label}</span>
               </div>
               
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <Calendar className="w-4 h-4" />
+              <div className="flex items-center space-x-2 text-sm" style={{color: 'var(--text-secondary)'}}>
+                <Calendar className="w-4 h-4" style={{color: 'var(--text-secondary)'}} />
                 <span>{formatDate(contract.createdAt)}</span>
               </div>
             </div>
@@ -165,7 +181,7 @@ const ModernContractCard = ({
                   cy="32"
                   r="28"
                   fill="none"
-                  stroke="#f3f4f6"
+                  stroke="var(--border-muted)"
                   strokeWidth="6"
                 />
                 <circle
@@ -173,30 +189,31 @@ const ModernContractCard = ({
                   cy="32"
                   r="28"
                   fill="none"
-                  stroke={contract.status === 'BothPartiesSigned' ? '#10b981' : '#3b82f6'}
+                  stroke={contract.status === 'BothPartiesSigned' ? 'var(--success)' : 'var(--accent-primary)'}
                   strokeWidth="6"
                   strokeDasharray={`${getProgressPercentage() * 1.76} 176`}
                   className="transition-all duration-500"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-sm font-bold text-gray-700">
+                <span className="text-sm font-bold" style={{color: 'var(--text-primary)'}}>
                   {contract.signatures?.length || 0}/2
                 </span>
               </div>
             </div>
-            <span className="text-xs text-gray-500 mt-1">Signatures</span>
+            <span className="text-xs mt-1" style={{color: 'var(--text-secondary)'}}>Signatures</span>
             </div>
           </div>
 
         {/* Status Description */}
-        <p className="text-sm text-gray-600 mb-4">{statusConfig.description}</p>
+        <p className="text-sm mb-4" style={{color: 'var(--text-secondary)'}}>{statusConfig.description}</p>
 
 
         {/* Expand/Collapse Button */}
         <button
           onClick={onToggle}
-          className="w-full mt-4 flex items-center justify-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors py-2"
+          className="w-full mt-4 flex items-center justify-center space-x-2 transition-colors py-2"
+          style={{color: 'var(--text-secondary)'}}
         >
           <span className="text-sm font-medium">
             {isExpanded ? 'Show Less' : 'Show Details'}
@@ -210,16 +227,17 @@ const ModernContractCard = ({
       </div>
 
       {isExpanded && (
-        <div className="relative p-6 bg-gray-50 space-y-6">
+        <div className="relative p-6 space-y-6" style={{backgroundColor: 'var(--bg-secondary)'}}>
           {/* Download Icon - Top Right */}
           <button
             onClick={() => onDownload && onDownload(contract.contractId)}
             disabled={actionLoading === `download-${contract.contractId}`}
-            className="absolute top-4 right-4 w-10 h-10 bg-green-100 text-green-600 rounded-xl hover:bg-green-200 transition-colors flex items-center justify-center border border-green-200 disabled:opacity-50"
+            className="absolute top-4 right-4 w-10 h-10 rounded-xl transition-colors flex items-center justify-center disabled:opacity-50 hover:opacity-80"
+            style={{backgroundColor: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--border-primary)'}}
             title="Download contract file"
           >
             {actionLoading === `download-${contract.contractId}` ? (
-              <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{borderColor: 'var(--success)'}}></div>
             ) : (
               <Download className="w-4 h-4" />
             )}
@@ -227,54 +245,54 @@ const ModernContractCard = ({
           {/* Parties Information */}
           <div>
             <div className="flex items-center space-x-2 mb-4">
-              <Users className="w-5 h-5 text-gray-600" />
-              <h4 className="font-semibold text-gray-900">Contract Parties</h4>
+              <Users className="w-5 h-5" style={{color: 'var(--text-secondary)'}} />
+              <h4 className="font-semibold" style={{color: 'var(--text-primary)'}}>Contract Parties</h4>
             </div>
             <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="rounded-xl p-4" style={{backgroundColor: 'var(--success-bg)', border: '1px solid var(--border-primary)'}}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-blue-700">First Party</span>
-                  {isFirstParty && <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">You</span>}
+                  <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>First Party</span>
+                  {isFirstParty && <span className="text-xs px-2 py-1 rounded-full" style={{backgroundColor: 'var(--warning-bg)', color: 'var(--text-primary)'}}>You</span>}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-blue-600 font-mono">{formatAddress(contract.firstParty)}</span>
+                  <span className="text-xs font-mono" style={{color: 'var(--text-secondary)'}}>{formatAddress(contract.firstParty)}</span>
                   <button
                     onClick={() => copyToClipboard(contract.firstParty, 'First Party Address')}
-                    className="p-1 hover:bg-blue-200 rounded transition-colors"
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
                   >
-                    <Copy className="w-3 h-3 text-blue-600" />
+                    <Copy className="w-3 h-3" style={{color: 'var(--text-secondary)'}} />
                   </button>
                 </div>
               </div>
 
-              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+              <div className="rounded-xl p-4" style={{backgroundColor: 'var(--warning-bg)', border: '1px solid var(--border-primary)'}}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-purple-700">Second Party</span>
-                  {isSecondParty && <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">You</span>}
+                  <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Second Party</span>
+                  {isSecondParty && <span className="text-xs px-2 py-1 rounded-full" style={{backgroundColor: 'var(--warning-bg)', color: 'var(--text-primary)'}}>You</span>}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-purple-600 font-mono">{formatAddress(contract.secondParty)}</span>
+                  <span className="text-xs font-mono" style={{color: 'var(--text-secondary)'}}>{formatAddress(contract.secondParty)}</span>
                   <button
                     onClick={() => copyToClipboard(contract.secondParty, 'Second Party Address')}
-                    className="p-1 hover:bg-purple-200 rounded transition-colors"
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
                   >
-                    <Copy className="w-3 h-3 text-purple-600" />
+                    <Copy className="w-3 h-3" style={{color: 'var(--text-secondary)'}} />
                   </button>
                 </div>
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <div className="rounded-xl p-4" style={{backgroundColor: 'var(--success-bg)', border: '1px solid var(--border-primary)'}}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-green-700">Notary</span>
-                  {isThirdParty && <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">You</span>}
+                  <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Notary</span>
+                  {isThirdParty && <span className="text-xs px-2 py-1 rounded-full" style={{backgroundColor: 'var(--warning-bg)', color: 'var(--text-primary)'}}>You</span>}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-green-600 font-mono">{formatAddress(contract.thirdParty)}</span>
+                  <span className="text-xs font-mono" style={{color: 'var(--text-secondary)'}}>{formatAddress(contract.thirdParty)}</span>
                   <button
                     onClick={() => copyToClipboard(contract.thirdParty, 'Notary Address')}
-                    className="p-1 hover:bg-green-200 rounded transition-colors"
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
                   >
-                    <Copy className="w-3 h-3 text-green-600" />
+                    <Copy className="w-3 h-3" style={{color: 'var(--text-secondary)'}} />
                   </button>
                 </div>
               </div>
@@ -284,40 +302,41 @@ const ModernContractCard = ({
           {/* Document Information */}
           <div>
             <div className="flex items-center space-x-2 mb-4">
-              <Shield className="w-5 h-5 text-gray-600" />
-              <h4 className="font-semibold text-gray-900">Document Information</h4>
+              <Shield className="w-5 h-5" style={{color: 'var(--text-secondary)'}} />
+              <h4 className="font-semibold" style={{color: 'var(--text-primary)'}}>Document Information</h4>
             </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="bg-white/5 rounded-xl p-4" style={{border: '1px solid var(--border-primary)'}}>
               <div className="grid md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Contract ID:</span>
-                  <p className="text-sm text-gray-600 font-mono">{contract.contractId || contract.id}</p>
+                  <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Contract ID:</span>
+                  <p className="text-sm font-mono" style={{color: 'var(--text-secondary)'}}>{contract.contractId || contract.id}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Block Number:</span>
-                  <p className="text-sm text-gray-600">{contract.createdBlock || contract.blockNumber || 'N/A'}</p>
+                  <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Block Number:</span>
+                  <p className="text-sm" style={{color: 'var(--text-secondary)'}}>{contract.createdBlock || contract.blockNumber || 'N/A'}</p>
                 </div>
               </div>
               
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Document Hash:</span>
+                  <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Document Hash:</span>
                   <button
                     onClick={() => setShowFullHash(!showFullHash)}
-                    className="text-xs text-blue-600 hover:text-blue-800"
+                    className="text-xs hover:opacity-80"
+                    style={{color: 'var(--border-primary)'}}
                   >
                     {showFullHash ? 'Hide' : 'Show Full Hash'}
                   </button>
                 </div>
-                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                  <span className={`text-xs text-gray-600 font-mono ${showFullHash ? 'break-all' : ''}`}>
+                <div className="flex items-center justify-between bg-white/10 rounded-lg p-3">
+                  <span className={`text-xs font-mono ${showFullHash ? 'break-all' : ''}`} style={{color: 'var(--text-secondary)'}}>
                     {showFullHash ? contract.fileHash : `${contract.fileHash.slice(0, 32)}...`}
                   </span>
                   <button
                     onClick={() => copyToClipboard(contract.fileHash, 'Document Hash')}
-                    className="p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0 ml-2"
+                    className="p-1 hover:bg-white/10 rounded transition-colors flex-shrink-0 ml-2"
                   >
-                    <Copy className="w-4 h-4 text-gray-500" />
+                    <Copy className="w-4 h-4" style={{color: 'var(--text-secondary)'}} />
                   </button>
                 </div>
               </div>
@@ -328,31 +347,32 @@ const ModernContractCard = ({
           {contract.signatures && contract.signatures.length > 0 && (
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <PenTool className="w-5 h-5 text-gray-600" />
-                <h4 className="font-semibold text-gray-900">Signatures</h4>
+                <PenTool className="w-5 h-5" style={{color: 'var(--text-secondary)'}} />
+                <h4 className="font-semibold" style={{color: 'var(--text-primary)'}}>Signatures</h4>
               </div>
               <div className="space-y-3">
                 {contract.signatures.map((signature, index) => (
                   <div key={index} className="bg-white border border-gray-200 rounded-xl p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{backgroundColor: 'var(--success-bg)'}}>
+                          <CheckCircle className="w-4 h-4" style={{color: 'var(--success)'}} />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>
                             {signature.signer === contract.firstParty ? 'First Party' :
                              signature.signer === contract.secondParty ? 'Second Party' :
                              'Notary'}
                           </p>
-                          <p className="text-xs text-gray-500 font-mono">{formatAddress(signature.signer)}</p>
+                          <p className="text-xs font-mono" style={{color: 'var(--text-secondary)'}}>{formatAddress(signature.signer)}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-gray-500">{formatDate(signature.signedAtTime || signature.timestamp)}</p>
+                        <p className="text-xs" style={{color: 'var(--text-secondary)'}}>{formatDate(signature.signedAtTime || signature.timestamp)}</p>
                         <button
                           onClick={() => copyToClipboard(signature.signatureData || signature.signature, 'Signature')}
-                          className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                          className="text-xs hover:opacity-80 flex items-center space-x-1"
+                          style={{color: 'var(--border-primary)'}}
                         >
                           <Copy className="w-3 h-3" />
                           <span>Copy</span>
@@ -369,27 +389,28 @@ const ModernContractCard = ({
           {contract.metadata && contract.metadata !== contract.contractName && contract.metadata !== contract.name && (
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <FileText className="w-5 h-5 text-gray-600" />
-                <h4 className="font-semibold text-gray-900">Additional Information</h4>
+                <FileText className="w-5 h-5" style={{color: 'var(--text-secondary)'}} />
+                <h4 className="font-semibold" style={{color: 'var(--text-primary)'}}>Additional Information</h4>
               </div>
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <p className="text-sm text-gray-600 leading-relaxed">{contract.metadata}</p>
+              <div className="bg-white/5 rounded-xl p-4" style={{border: '1px solid var(--border-primary)'}}>
+                <p className="text-sm leading-relaxed" style={{color: 'var(--text-secondary)'}}>{contract.metadata}</p>
               </div>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+          <div className="flex justify-between items-center pt-4 border-t" style={{borderColor: 'var(--border-primary)'}}>
             <div className="flex space-x-3">
               {canSign && (
                 <button
                   onClick={() => onSign && onSign(contract.fileHash)}
                   disabled={actionLoading === contract.fileHash}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl font-medium hover:bg-blue-200 transition-colors text-sm border border-blue-300 disabled:opacity-50"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-xl font-medium transition-colors text-sm disabled:opacity-50" style={{backgroundColor: 'var(--success-bg)'}}
+                  style={{color: 'var(--text-primary)', border: '1px solid var(--border-primary)'}}
                 >
                   {actionLoading === contract.fileHash ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{borderColor: 'var(--success)', borderTopColor: 'transparent'}}></div>
                       <span>Signing...</span>
                     </>
                   ) : (
@@ -405,11 +426,12 @@ const ModernContractCard = ({
                 <button
                   onClick={() => onDeactivate && onDeactivate(contract.fileHash)}
                   disabled={actionLoading === contract.fileHash}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl font-medium hover:bg-red-200 transition-colors text-sm border border-red-300 disabled:opacity-50"
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-500/20 rounded-xl font-medium hover:bg-red-500/30 transition-colors text-sm disabled:opacity-50"
+                  style={{color: 'var(--text-primary)', border: '1px solid var(--border-primary)'}}
                 >
                   {actionLoading === contract.fileHash ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
                       <span>Deactivating...</span>
                     </>
                   ) : (
@@ -424,7 +446,8 @@ const ModernContractCard = ({
               {onViewDetails && (
                 <button
                   onClick={() => onViewDetails(contract)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors text-sm"
+                  className="flex items-center space-x-2 px-4 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors text-sm"
+                  style={{color: 'var(--text-primary)', border: '1px solid var(--border-primary)'}}
                 >
                   <ExternalLink className="w-4 h-4" />
                   <span>View on Explorer</span>

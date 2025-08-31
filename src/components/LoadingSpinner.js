@@ -38,27 +38,27 @@ const LoadingSpinner = ({
         <div 
           className={`
             ${getSizeClasses()} 
-            border-white/30 border-t-white 
+            border-t-transparent" style={{borderColor: 'var(--text-secondary)', borderTopColor: 'var(--text-primary)'}} 
             rounded-full animate-spin
           `}
         />
         
         {/* Inner pulse dot */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{backgroundColor: 'var(--text-primary)'}} />
         </div>
       </div>
 
       {/* Loading Message */}
       {showMessage && message && (
         <div className="text-center">
-          <p className={`text-white font-medium ${getTextSize()}`}>
+          <p className={`font-medium ${getTextSize()}`} style={{color: 'var(--text-primary)'}}>
             {message}
           </p>
           <div className="flex justify-center mt-2 space-x-1">
-            <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: '0ms', backgroundColor: 'var(--text-secondary)' }} />
+            <div className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: '150ms', backgroundColor: 'var(--text-secondary)' }} />
+            <div className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: '300ms', backgroundColor: 'var(--text-secondary)' }} />
           </div>
         </div>
       )}
@@ -68,12 +68,12 @@ const LoadingSpinner = ({
 
 // Inline loader for buttons
 export const InlineSpinner = ({ className = '' }) => (
-  <div className={`inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin ${className}`} />
+  <div className={`inline-block w-4 h-4 border-2 border-t-transparent rounded-full animate-spin ${className}`} style={{borderColor: 'var(--text-secondary)', borderTopColor: 'var(--text-primary)'}} />
 );
 
 // Full page loader
 export const FullPageLoader = ({ message = 'Loading application...' }) => (
-  <div className="fixed inset-0 bg-gradient-to-br from-blue-500 via-purple-600 to-blue-700 flex items-center justify-center z-50">
+  <div className="fixed inset-0 flex items-center justify-center z-50" style={{background: 'var(--bg-primary)'}}>
     <div className="text-center">
       <LoadingSpinner message={message} size="large" />
     </div>
@@ -82,8 +82,8 @@ export const FullPageLoader = ({ message = 'Loading application...' }) => (
 
 // Card loader
 export const CardLoader = ({ message = 'Loading...', className = '' }) => (
-  <div className={`bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-glass border border-white/20 ${className}`}>
-    <LoadingSpinner message={message} size="medium" className="text-gray-600" />
+  <div className={`backdrop-blur-sm rounded-2xl p-8 shadow-glass ${className}`} style={{backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)'}}>
+    <LoadingSpinner message={message} size="medium" />
   </div>
 );
 

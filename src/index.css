@@ -2,6 +2,94 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+/* =================================
+   CENTRALIZED COLOR SYSTEM
+   ================================= */
+   
+/* Main Theme - Dark Blue Ocean */
+:root {
+  /* Background Colors */
+  --bg-primary: #051b33;
+  --bg-secondary: rgba(5, 27, 51, 0.8);
+  --bg-card: rgba(5, 27, 51, 0.9);
+  --bg-overlay: rgba(5, 27, 51, 0.95);
+  --bg-hover: rgba(255, 255, 255, 0.1);
+  --bg-active: rgba(255, 255, 255, 0.15);
+  
+  /* Text Colors */
+  --text-primary: #e9f5f9;
+  --text-secondary: rgba(233, 245, 249, 0.8);
+  --text-tertiary: rgba(233, 245, 249, 0.6);
+  --text-muted: rgba(233, 245, 249, 0.5);
+  
+  /* Title Colors */
+  --title-primary: #e9f5f9;
+  --title-secondary: rgba(233, 245, 249, 0.9);
+  --title-accent: #1ba098;
+  
+  /* Border Colors */
+  --border-primary: #ffcf98;
+  --border-secondary: rgba(255, 207, 152, 0.6);
+  --border-muted: rgba(255, 207, 152, 0.3);
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 207, 152, 0.8);
+  
+  /* Accent Colors */
+  --accent-primary: #1ba098;
+  --accent-secondary: #deb992;
+  --accent-dark: #051622;
+  
+  /* State Colors */
+  --success: #1ba098;
+  --success-bg: rgba(27, 160, 152, 0.1);
+  --error: #ef4444;
+  --error-bg: rgba(239, 68, 68, 0.1);
+  --warning: #ffcf98;
+  --warning-bg: rgba(255, 207, 152, 0.1);
+  --info: #1ba098;
+  --info-bg: rgba(27, 160, 152, 0.1);
+}
+
+/* 
+   ALTERNATIVE THEMES - Simply uncomment to switch themes
+   ===================================================== */
+   
+/* Purple Night Theme 
+:root {
+  --bg-primary: #1a0d2e;
+  --bg-secondary: rgba(26, 13, 46, 0.8);
+  --text-primary: #f3f0ff;
+  --text-secondary: rgba(243, 240, 255, 0.8);
+  --border-primary: #a855f7;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+} */
+
+/* Forest Green Theme
+:root {
+  --bg-primary: #0f2e1a;
+  --bg-secondary: rgba(15, 46, 26, 0.8);
+  --text-primary: #f0fdf4;
+  --text-secondary: rgba(240, 253, 244, 0.8);
+  --border-primary: #34d399;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+} */
+
+/* Warm Sunset Theme
+:root {
+  --bg-primary: #2e1a0f;
+  --bg-secondary: rgba(46, 26, 15, 0.8);
+  --text-primary: #fef7f0;
+  --text-secondary: rgba(254, 247, 240, 0.8);
+  --border-primary: #fb923c;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+} */
+
 /* Import Inter font for modern typography */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
@@ -20,7 +108,8 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #e0e7ff 100%);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
 }
 
@@ -35,33 +124,33 @@ code {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+  background: linear-gradient(135deg, #1ba098, #deb992);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #94a3b8, #64748b);
+  background: linear-gradient(135deg, #1ba098, #051622);
 }
 
 /* Selection styles */
 ::selection {
-  background: rgba(59, 130, 246, 0.3);
-  color: #1e40af;
+  background: rgba(27, 160, 152, 0.3);
+  color: #051622;
 }
 
 ::-moz-selection {
-  background: rgba(59, 130, 246, 0.3);
-  color: #1e40af;
+  background: rgba(27, 160, 152, 0.3);
+  color: #051622;
 }
 
 /* Focus styles for accessibility */
 *:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #1ba098;
   outline-offset: 2px;
 }
 
@@ -88,22 +177,23 @@ code {
 
 /* Glass morphism utility classes */
 .glass-card {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-overlay);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-muted);
 }
 
 .glass-card-dark {
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-primary);
 }
 
 /* Button hover effects */
 .btn-glow:hover {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 20px rgba(27, 160, 152, 0.4);
 }
 
 .btn-lift:hover {

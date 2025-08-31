@@ -17,23 +17,24 @@ export const ModernSpinner = ({
   };
 
   const colorClasses = {
-    blue: 'border-blue-500',
-    green: 'border-green-500',
-    red: 'border-red-500',
-    yellow: 'border-yellow-500',
-    purple: 'border-purple-500',
-    gray: 'border-gray-500',
-    white: 'border-white'
+    blue: 'var(--success)',
+    green: 'var(--success)',
+    red: 'var(--error)',
+    yellow: 'var(--warning)',
+    purple: 'var(--accent-primary)',
+    gray: 'var(--text-muted)',
+    white: 'var(--text-primary)'
   };
 
   return (
     <div 
       className={`
         ${sizeClasses[size]} 
-        border-2 ${colorClasses[color]} border-t-transparent 
+        border-2 border-t-transparent 
         rounded-full animate-spin
         ${className}
       `}
+      style={{borderColor: colorClasses[color]}}
     />
   );
 };
@@ -45,27 +46,28 @@ export const LoadingCard = ({ count = 1 }) => {
       {Array.from({ length: count }, (_, index) => (
         <div 
           key={index} 
-          className="bg-white rounded-2xl p-6 border border-gray-200 animate-pulse"
+          className="glass-card-dark rounded-2xl p-6 animate-pulse"
+          style={{border: '1px solid var(--border-primary)'}}
         >
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
+              <div className="w-10 h-10 bg-white/10 rounded-xl"></div>
               <div className="space-y-2">
-                <div className="h-5 bg-gray-200 rounded w-32"></div>
-                <div className="h-3 bg-gray-200 rounded w-24"></div>
+                <div className="h-5 bg-white/10 rounded w-32"></div>
+                <div className="h-3 bg-white/10 rounded w-24"></div>
               </div>
             </div>
-            <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+            <div className="w-16 h-16 bg-white/10 rounded-full"></div>
           </div>
           
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-white/10 rounded w-full"></div>
+            <div className="h-4 bg-white/10 rounded w-3/4"></div>
           </div>
           
           <div className="mt-4 flex space-x-3">
-            <div className="h-8 bg-gray-200 rounded-lg flex-1"></div>
-            <div className="h-8 bg-gray-200 rounded-lg w-20"></div>
+            <div className="h-8 bg-white/10 rounded-lg flex-1"></div>
+            <div className="h-8 bg-white/10 rounded-lg w-20"></div>
           </div>
         </div>
       ))}
@@ -80,22 +82,22 @@ export const FullPageLoading = ({
   showLogo = true 
 }) => {
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center z-50">
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{backgroundColor: 'var(--bg-primary)'}}>
       <div className="text-center">
         {showLogo && (
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{background: 'linear-gradient(to bottom right, var(--accent-dark), var(--accent-primary))'}}>
+            <div className="w-8 h-8 border-3 border-t-transparent rounded-full animate-spin" style={{borderColor: 'var(--text-primary)', borderTopColor: 'transparent'}}></div>
           </div>
         )}
         
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{message}</h2>
+        <h2 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>{message}</h2>
         {subMessage && (
-          <p className="text-gray-600 mb-6">{subMessage}</p>
+          <p className="mb-6" style={{color: 'var(--text-secondary)'}}>{subMessage}</p>
         )}
         
         <div className="flex items-center justify-center space-x-2">
           <ModernSpinner size="sm" color="blue" />
-          <span className="text-sm text-gray-500">Please wait...</span>
+          <span className="text-sm" style={{color: 'var(--text-secondary)'}}>Please wait...</span>
         </div>
       </div>
     </div>

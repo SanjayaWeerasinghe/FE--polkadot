@@ -1,7 +1,7 @@
 {
   "name": "digital-notarized-contracts",
   "version": "1.0.0",
-  "description": "Digital Notarized Contracts - Secure blockchain-based contract management system",
+  "description": "Digitally Notarized Contracts - Secure blockchain-based contract management system",
   "private": true,
   "dependencies": {
     "@polkadot/api": "^16.4.3",

@@ -98,7 +98,7 @@ const ErrorModal = ({
 
   const copyErrorDetails = () => {
     const details = `
-Error Report - Digital Notarized Contracts
+Error Report - Digitally Notarized Contracts
 ==========================================
 Time: ${new Date().toISOString()}
 Category: ${errorInfo.category}

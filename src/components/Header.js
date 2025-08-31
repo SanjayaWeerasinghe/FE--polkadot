@@ -10,7 +10,7 @@ const Header = () => {
         {/* Content */}
         <div className="relative z-10">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 drop-shadow-lg text-responsive-3xl">
-            📋 Digital Notarized Contracts
+            📋 Digitally Notarized Contracts
           </h1>
           <p className="text-lg md:text-xl lg:text-2xl opacity-90 leading-relaxed text-responsive-xl">
             Secure, Transparent, Immutable Contract Management
