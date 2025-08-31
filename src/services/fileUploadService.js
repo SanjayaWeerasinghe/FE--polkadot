@@ -2,7 +2,7 @@
 
 class FileUploadService {
   constructor() {
-    this.baseUrl = process.env.REACT_APP_UPLOAD_API_URL || 'http://localhost:3000/api';
+    this.baseUrl = process.env.REACT_APP_UPLOAD_API_URL;
     this.uploadTimeout = 120000; // 2 minutes timeout for large files
   }
 
