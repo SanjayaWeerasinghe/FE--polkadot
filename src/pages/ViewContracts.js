@@ -285,19 +285,20 @@ const ViewContracts = ({ onBack, onStatus }) => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{color: 'var(--text-primary)'}}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center space-x-4">
           <button
             onClick={onBack}
-            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
+            style={{border: '1px solid var(--border-primary)'}}
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <ArrowLeft className="w-5 h-5" style={{color: 'var(--text-primary)'}} />
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Contracts</h1>
-            <p className="text-gray-600">Manage and track your digital contracts</p>
+            <h1 className="text-3xl font-bold" style={{color: 'var(--text-primary)'}}>My Contracts</h1>
+            <p style={{color: 'var(--text-secondary)'}}>Manage and track your digital contracts</p>
           </div>
         </div>
 
@@ -307,7 +308,8 @@ const ViewContracts = ({ onBack, onStatus }) => {
           <button
             onClick={handleRefresh}
             disabled={loading || !account || !account.address}
-            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-white/10 rounded-xl font-medium hover:bg-white/20 transition-colors disabled:opacity-50"
+            style={{color: '#e9f5f9', border: '1px solid #ffcf98'}}
           >
             {loading ? 'Loading...' : 'Refresh'}
           </button>
@@ -321,14 +323,19 @@ const ViewContracts = ({ onBack, onStatus }) => {
                 className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
                   filter === filterOption.key
                     ? filterOption.key === 'deactivated'
-                      ? 'bg-red-100 text-red-700 border border-red-200'
+                      ? 'bg-red-500/20'
                       : filterOption.key === 'completed'
-                      ? 'bg-green-100 text-green-700 border border-green-200'
+                      ? ''
                       : filterOption.key === 'pending'
-                      ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                      : 'bg-blue-100 text-blue-700 border border-blue-200'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? ''
+                      : ''
+                    : ''
                 }`}
+                style={{
+                  color: 'var(--text-primary)',
+                  backgroundColor: filter === filterOption.key ? 'var(--success-bg)' : 'var(--bg-hover)',
+                  border: filter === filterOption.key ? '1px solid var(--border-primary)' : '1px solid transparent'
+                }}
               >
                 {filterOption.label} ({filterOption.count})
               </button>

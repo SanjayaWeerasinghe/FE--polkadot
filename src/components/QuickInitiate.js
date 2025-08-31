@@ -65,7 +65,7 @@ export default function QuickInitiate() {
       setStatus('🔌 Connecting to blockchain via service...');
       
       // Enable extension
-      const extensions = await web3Enable('Digital Notarized Contracts');
+      const extensions = await web3Enable('Digitally Notarized Contracts');
       if (extensions.length === 0) {
         throw new Error('No extension found');
       }

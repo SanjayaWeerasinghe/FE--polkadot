@@ -14,24 +14,29 @@ const UserOption = ({ user, onSelect, onToggleFavorite, isFavorite, isSelected }
 
   return (
     <div
-      className={`flex items-center space-x-3 px-4 py-3 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
-        isSelected ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
-      }`}
+      className={`flex items-center space-x-3 px-4 py-3 cursor-pointer transition-colors border-b last:border-b-0`}
+      style={{
+        borderColor: 'var(--border-subtle)',
+        backgroundColor: isSelected ? 'var(--success-bg)' : 'transparent'
+      }}
+      onMouseEnter={(e) => !isSelected && (e.target.style.backgroundColor = 'var(--bg-hover)')}
+      onMouseLeave={(e) => !isSelected && (e.target.style.backgroundColor = 'transparent')}
       onClick={onSelect}
     >
       {/* Online Status */}
-      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
-        user.isOnline ? 'bg-green-500' : 'bg-gray-400'
-      }`}></div>
+      <div 
+        className="w-3 h-3 rounded-full flex-shrink-0"
+        style={{backgroundColor: user.isOnline ? 'var(--success)' : 'var(--text-muted)'}}
+      ></div>
       
       {/* User Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium text-gray-900 truncate">{user.name}</span>
+          <span className="text-sm font-medium truncate" style={{color: 'var(--text-primary)'}}>{user.name}</span>
           {isFavorite && <Star className="w-3 h-3 text-yellow-500 fill-current flex-shrink-0" />}
         </div>
-        <div className="text-xs text-gray-500 truncate">{user.email}</div>
-        <div className="text-xs text-gray-400 font-mono truncate">
+        <div className="text-xs truncate" style={{color: 'var(--text-secondary)'}}>{user.email}</div>
+        <div className="text-xs font-mono truncate" style={{color: 'var(--text-tertiary)'}}>
           {user.primaryAddress.slice(0, 8)}...{user.primaryAddress.slice(-8)}
         </div>
       </div>
@@ -39,11 +44,8 @@ const UserOption = ({ user, onSelect, onToggleFavorite, isFavorite, isSelected }
       {/* Favorite Button */}
       <button
         onClick={handleFavoriteClick}
-        className={`p-1 rounded-lg transition-colors flex-shrink-0 ${
-          isFavorite 
-            ? 'text-yellow-500 hover:text-yellow-600' 
-            : 'text-gray-300 hover:text-yellow-400'
-        }`}
+        className="p-1 rounded-lg transition-colors flex-shrink-0 hover:opacity-80"
+        style={{color: isFavorite ? 'var(--warning)' : 'var(--text-muted)'}}
         title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
       >
         <Star className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
@@ -503,37 +505,38 @@ const ModernContractForm = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-white">
       {/* Header */}
       <div className="flex items-center space-x-4 mb-8">
         <button
           onClick={onBack}
           disabled={loading}
-          className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
+          className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+          <ArrowLeft className="w-5 h-5 text-white" />
         </button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Create New Contract</h1>
-          <p className="text-gray-600">Upload documents and specify contract parties</p>
+          <h1 className="text-3xl font-bold" style={{color: 'var(--text-primary)'}}
+          >Create New Contract</h1>
+          <p style={{color: 'var(--text-secondary)'}}>Upload documents and specify contract parties</p>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Left Column - Form */}
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+          <div className="glass-card-dark rounded-2xl p-6 shadow-sm">
             <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--success-bg)'}}>
+                <FileText className="w-5 h-5" style={{color: 'var(--success)'}} />
               </div>
-              <h2 className="text-xl font-semibold text-gray-900">Contract Details</h2>
+              <h2 className="text-xl font-semibold" style={{color: 'var(--text-primary)'}}>Contract Details</h2>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Contract Name */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                <label className="block text-sm font-semibold mb-2" style={{color: 'var(--text-primary)'}}>
                   Contract Name *
                 </label>
                 <input
@@ -541,23 +544,28 @@ const ModernContractForm = ({
                   value={formData.contractName}
                   onChange={(e) => handleInputChange('contractName', e.target.value)}
                   onBlur={() => handleBlur('contractName')}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                    errors.contractName ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition-all"
+                  style={{
+                    backgroundColor: errors.contractName ? 'var(--error-bg)' : 'var(--bg-hover)',
+                    color: 'var(--text-primary)',
+                    borderColor: errors.contractName ? 'var(--error)' : 'var(--border-subtle)'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--success)'}
+                  onBlur={(e) => !errors.contractName && (e.target.style.borderColor = 'var(--border-subtle)')}
                   placeholder="Enter a descriptive contract name"
                   disabled={loading}
                 />
                 {errors.contractName && (
                   <div className="flex items-center space-x-2 mt-2">
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                    <span className="text-sm text-red-600">{errors.contractName}</span>
+                    <AlertCircle className="w-4 h-4" style={{color: 'var(--error)'}} />
+                    <span className="text-sm" style={{color: 'var(--error)'}}>{errors.contractName}</span>
                   </div>
                 )}
               </div>
 
               {/* Initiator Role Selection */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                <label className="block text-sm font-semibold mb-3" style={{color: 'var(--text-primary)'}}>
                   Your Role in this Contract *
                 </label>
                 <div className="grid grid-cols-3 gap-3 mb-4">
@@ -566,11 +574,14 @@ const ModernContractForm = ({
                       key={role}
                       type="button"
                       onClick={() => handleInitiatorRoleChange(role)}
-                      className={`p-3 rounded-xl border-2 transition-all ${
-                        formData.initiatorRole === role
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                      }`}
+                      className="p-3 rounded-xl border-2 transition-all"
+                      style={{
+                        borderColor: formData.initiatorRole === role ? 'var(--success)' : 'var(--border-secondary)',
+                        backgroundColor: formData.initiatorRole === role ? 'var(--success-bg)' : 'transparent',
+                        color: formData.initiatorRole === role ? 'var(--text-primary)' : 'var(--text-secondary)'
+                      }}
+                      onMouseEnter={(e) => formData.initiatorRole !== role && (e.target.style.borderColor = 'var(--warning)')}
+                      onMouseLeave={(e) => formData.initiatorRole !== role && (e.target.style.borderColor = 'var(--border-secondary)')}
                       disabled={loading}
                     >
                       <div className="text-center">
@@ -590,14 +601,15 @@ const ModernContractForm = ({
                 return (
                   <div key={partyType}>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-semibold text-gray-900">
+                      <label className="block text-sm font-semibold" style={{color: 'var(--text-primary)'}}>
                         {getRoleLabel(partyType)} {isCurrentUser ? '(You)' : '*'}
                       </label>
                       {!isCurrentUser && (
                         <button
                           type="button"
                           onClick={() => handleAsMe(partyType)}
-                          className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-200 transition-colors"
+                          className="text-xs px-2 py-1 rounded-lg transition-colors hover:opacity-80"
+                          style={{backgroundColor: 'var(--success-bg)', color: 'var(--success)'}}
                           disabled={loading}
                         >
                           As Me
@@ -611,11 +623,12 @@ const ModernContractForm = ({
                         <input
                           type="text"
                           value={formData[partyType]}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-green-50 text-green-700 pr-12 font-mono text-sm"
+                          className="w-full px-4 py-3 border rounded-xl pr-12 font-mono text-sm"
+                          style={{borderColor: 'var(--success)', backgroundColor: 'var(--success-bg)', color: 'var(--text-primary)'}}
                           disabled
                         />
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          <UserCheck className="w-5 h-5 text-green-500" />
+                          <UserCheck className="w-5 h-5" style={{color: 'var(--success)'}} />
                         </div>
                       </div>
                     ) : (
@@ -626,9 +639,14 @@ const ModernContractForm = ({
                           value={formData[partyType]}
                           onChange={(e) => handleInputChange(partyType, e.target.value)}
                           onBlur={() => handleBlur(partyType)}
-                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm pr-12 ${
-                            errors[partyType] ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                          }`}
+                          className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition-all font-mono text-sm pr-12"
+                          style={{
+                            backgroundColor: errors[partyType] ? 'var(--error-bg)' : 'var(--bg-hover)',
+                            color: 'var(--text-primary)',
+                            borderColor: errors[partyType] ? 'var(--error)' : 'var(--border-subtle)'
+                          }}
+                          onFocus={(e) => e.target.style.borderColor = 'var(--success)'}
+                          onBlur={(e) => !errors[partyType] && (e.target.style.borderColor = 'var(--border-subtle)')}
                           placeholder="Enter address or select user"
                           disabled={loading}
                         />
@@ -637,7 +655,8 @@ const ModernContractForm = ({
                         <button
                           type="button"
                           onClick={() => toggleDropdown(partyType)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors hover:opacity-80"
+                          style={{color: 'var(--text-tertiary)'}}
                           disabled={loading}
                         >
                           <ChevronDown className={`w-5 h-5 transition-transform ${
@@ -647,25 +666,33 @@ const ModernContractForm = ({
                         
                         {/* Enhanced Dropdown Menu */}
                         {dropdownStates[partyType] && (
-                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-hidden">
+                          <div className="absolute z-10 w-full mt-1 glass-card-dark rounded-xl shadow-lg max-h-80 overflow-hidden">
                             {/* Search Header */}
-                            <div className="p-3 border-b border-gray-100 bg-gray-50">
+                            <div className="p-3 border-b" style={{borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-hover)'}}>
                               <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{color: 'var(--text-tertiary)'}} />
                                 <input
                                   ref={el => searchInputRefs.current[partyType] = el}
                                   type="text"
                                   value={searchTerms[partyType]}
                                   onChange={(e) => handleSearchChange(partyType, e.target.value)}
                                   onKeyDown={(e) => handleKeyDown(e, partyType)}
-                                  className="w-full pl-10 pr-10 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full pl-10 pr-10 py-2 text-sm border rounded-lg focus:ring-2 focus:border-transparent transition-all"
+                                  style={{
+                                    backgroundColor: 'var(--bg-hover)',
+                                    color: 'var(--text-primary)',
+                                    borderColor: 'var(--border-subtle)'
+                                  }}
+                                  onFocus={(e) => e.target.style.borderColor = 'var(--success)'}
+                                  onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
                                   placeholder="Search users..."
                                   disabled={usersLoading}
                                 />
                                 <button
                                   onClick={refreshUsers}
                                   disabled={usersLoading}
-                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 disabled:opacity-50 hover:opacity-80 transition-colors"
+                                  style={{color: 'var(--text-tertiary)'}}
                                   title="Refresh users"
                                 >
                                   <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
@@ -676,8 +703,8 @@ const ModernContractForm = ({
                             {/* User List */}
                             <div className="max-h-64 overflow-y-auto">
                               {usersLoading ? (
-                                <div className="px-4 py-6 text-sm text-gray-500 text-center flex items-center justify-center space-x-2">
-                                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                <div className="px-4 py-6 text-sm text-center flex items-center justify-center space-x-2" style={{color: 'var(--text-secondary)'}}>
+                                  <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{borderColor: 'var(--success)'}}></div>
                                   <span>Loading users...</span>
                                 </div>
                               ) : (() => {
@@ -686,16 +713,16 @@ const ModernContractForm = ({
                                 
                                 if (allUsers.length === 0) {
                                   return (
-                                    <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                                    <div className="px-4 py-6 text-sm text-white/70 text-center">
                                       {hasSearch ? (
                                         <div>
                                           <div className="mb-2">No users match "{searchTerms[partyType]}"</div>
-                                          <div className="text-xs text-gray-400">Try a different search term</div>
+                                          <div className="text-xs text-white/50">Try a different search term</div>
                                         </div>
                                       ) : (
                                         <div>
                                           <div className="mb-2">No other users available</div>
-                                          <div className="text-xs text-gray-400">Enter address manually above</div>
+                                          <div className="text-xs text-white/50">Enter address manually above</div>
                                         </div>
                                       )}
                                     </div>
@@ -721,7 +748,7 @@ const ModernContractForm = ({
                                       <div>
                                         {favorites.length > 0 && (
                                           <div>
-                                            <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-100">
+                                            <div className="px-4 py-2 text-xs font-semibold text-white/70 uppercase tracking-wider bg-white/5 border-b border-white/10">
                                               ⭐ Favorites
                                             </div>
                                             {favorites.map((user, index) => (
@@ -739,7 +766,7 @@ const ModernContractForm = ({
                                         
                                         {recent.length > 0 && (
                                           <div>
-                                            <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-100">
+                                            <div className="px-4 py-2 text-xs font-semibold text-white/70 uppercase tracking-wider bg-white/5 border-b border-white/10">
                                               🕐 Recent
                                             </div>
                                             {recent.map((user, index) => (
@@ -758,7 +785,7 @@ const ModernContractForm = ({
                                         {others.length > 0 && (
                                           <div>
                                             {(favorites.length > 0 || recent.length > 0) && (
-                                              <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-100">
+                                              <div className="px-4 py-2 text-xs font-semibold text-white/70 uppercase tracking-wider bg-white/5 border-b border-white/10">
                                                 👥 All Users
                                               </div>
                                             )}
@@ -782,7 +809,7 @@ const ModernContractForm = ({
                             </div>
                             
                             {/* Footer with keyboard shortcuts */}
-                            <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+                            <div className="px-3 py-2 bg-white/5 border-t border-white/10 text-xs text-white/70">
                               <div className="flex items-center justify-between">
                                 <span>🔍 Type to search • ⭐ Click star to favorite</span>
                                 <span>↑↓ Navigate • ⏎ Select • Esc Close</span>
@@ -795,12 +822,12 @@ const ModernContractForm = ({
                     
                     {errors[partyType] && (
                       <div className="flex items-center space-x-2 mt-2">
-                        <AlertCircle className="w-4 h-4 text-red-500" />
-                        <span className="text-sm text-red-600">{errors[partyType]}</span>
+                        <AlertCircle className="w-4 h-4" style={{color: 'var(--error)'}} />
+                        <span className="text-sm" style={{color: 'var(--error)'}}>{errors[partyType]}</span>
                       </div>
                     )}
                     
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs mt-1" style={{color: 'var(--text-secondary)'}}>
                       {isCurrentUser ? 
                         `Your primary wallet: ${formatAddress(currentUserAddress)}` : 
                         getRoleDescription(partyType)
@@ -812,18 +839,25 @@ const ModernContractForm = ({
 
               {/* Additional Metadata */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                <label className="block text-sm font-semibold mb-2" style={{color: 'var(--text-primary)'}}>
                   Additional Metadata (Optional)
                 </label>
                 <textarea
                   value={formData.metadata}
                   onChange={(e) => handleInputChange('metadata', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition-all"
+                  style={{
+                    backgroundColor: 'var(--bg-hover)',
+                    color: 'var(--text-primary)',
+                    borderColor: 'var(--border-subtle)'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--success)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
                   rows="3"
                   placeholder="Additional contract information, terms, or notes..."
                   disabled={loading}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs mt-1" style={{color: 'var(--text-tertiary)'}}>
                   Optional details that will be stored with the contract
                 </p>
               </div>
@@ -832,7 +866,8 @@ const ModernContractForm = ({
               <button
                 type="submit"
                 disabled={!isFormValid || loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
+                className="w-full py-4 rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
+                style={{background: 'linear-gradient(to right, var(--accent-dark), var(--success))', color: 'var(--text-primary)'}}
               >
                 {loading ? (
                   <>
@@ -850,23 +885,23 @@ const ModernContractForm = ({
           </div>
 
           {/* Enhanced Party Information Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
+          <div className="rounded-2xl p-6" style={{background: 'linear-gradient(to bottom right, var(--bg-secondary), var(--success-bg))', border: '1px solid var(--border-secondary)'}}>
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Users className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--success-bg)'}}>
+                <Users className="w-5 h-5" style={{color: 'var(--success)'}} />
               </div>
-              <h3 className="text-lg font-semibold text-blue-800">Contract Parties</h3>
+              <h3 className="text-lg font-semibold" style={{color: 'var(--text-primary)'}}>Contract Parties</h3>
             </div>
             
             {/* Current Role Display */}
-            <div className="mb-4 p-3 bg-white/50 rounded-lg">
+            <div className="mb-4 p-3 rounded-lg" style={{backgroundColor: 'var(--bg-hover)'}}>
               <div className="flex items-center space-x-2 mb-1">
-                <UserCheck className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-blue-800">
+                <UserCheck className="w-4 h-4" style={{color: 'var(--success)'}} />
+                <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>
                   You are the {getRoleLabel(formData.initiatorRole)}
                 </span>
               </div>
-              <p className="text-xs text-blue-600 ml-6">
+              <p className="text-xs ml-6" style={{color: 'var(--text-secondary)'}}>
                 {getRoleDescription(formData.initiatorRole)}
               </p>
             </div>
@@ -878,23 +913,26 @@ const ModernContractForm = ({
                 
                 return (
                   <div key={partyType} className="flex items-start space-x-3">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${
-                      partyType === 'firstParty' ? 'bg-blue-500' :
-                      partyType === 'secondParty' ? 'bg-purple-500' : 'bg-green-500'
-                    }`}></div>
+                    <div 
+                      className="w-2 h-2 rounded-full mt-2"
+                      style={{
+                        backgroundColor: partyType === 'firstParty' ? 'var(--accent-primary)' :
+                                       partyType === 'secondParty' ? 'var(--warning)' : 'var(--success)'
+                      }}
+                    ></div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
-                        <p className="font-medium text-blue-800">
+                        <p className="font-medium" style={{color: 'var(--text-primary)'}}>
                           {getRoleLabel(partyType)}
                           {isYou && ' (You)'}
                         </p>
                         {hasAddress && (
-                          <CheckCircle className="w-3 h-3 text-green-500" />
+                          <CheckCircle className="w-3 h-3" style={{color: 'var(--success)'}} />
                         )}
                       </div>
-                      <p className="text-blue-600 text-xs">{getRoleDescription(partyType)}</p>
+                      <p className="text-xs" style={{color: 'var(--text-secondary)'}}>{getRoleDescription(partyType)}</p>
                       {hasAddress && (
-                        <p className="text-blue-500 text-xs font-mono mt-1">
+                        <p className="text-xs font-mono mt-1" style={{color: 'var(--text-tertiary)'}}>
                           {formatUserDisplay(formData[partyType])}
                         </p>
                       )}
@@ -906,15 +944,15 @@ const ModernContractForm = ({
             
             {/* User Stats & Tips */}
             <div className="mt-4 space-y-3">
-              <div className="flex items-center justify-between text-xs text-blue-700">
+              <div className="flex items-center justify-between text-xs" style={{color: 'var(--text-secondary)'}}>
                 <span>👥 {availableUsers.length} registered users</span>
                 <span>⭐ {favoriteUsers.length} favorites</span>
                 <span>🕒 {recentContacts.length} recent</span>
               </div>
               
-              <div className="p-3 bg-white/30 rounded-lg">
-                <p className="text-xs font-medium text-blue-800 mb-1">💡 Quick Tips:</p>
-                <ul className="text-xs text-blue-700 space-y-1">
+              <div className="p-3 rounded-lg" style={{backgroundColor: 'var(--bg-hover)'}}>
+                <p className="text-xs font-medium mb-1" style={{color: 'var(--text-primary)'}}>💡 Quick Tips:</p>
+                <ul className="text-xs space-y-1" style={{color: 'var(--text-secondary)'}}>
                   <li>• Click "As Me" to switch your role in the contract</li>
                   <li>• Search users by name, email, or address</li>
                   <li>• ⭐ Star users to add them to favorites</li>
@@ -927,7 +965,7 @@ const ModernContractForm = ({
 
         {/* Right Column - File Upload */}
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+          <div className="glass-card-dark rounded-2xl p-6 shadow-sm">
             <ModernFileUpload
               onFileSelect={handleFileSelect}
               fileInfo={fileInfo}
@@ -940,10 +978,10 @@ const ModernContractForm = ({
             
             {/* File validation feedback */}
             {fileValidationState.validating && (
-              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mt-3 p-3 rounded-lg" style={{backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)'}}>
                 <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-sm text-blue-700">Checking if file already exists on blockchain...</span>
+                  <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{borderColor: 'var(--success)'}}></div>
+                  <span className="text-sm text-white/70">Checking if file already exists on blockchain...</span>
                 </div>
               </div>
             )}
@@ -951,66 +989,66 @@ const ModernContractForm = ({
             {fileValidationState.error && (
               <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                  <span className="text-sm text-red-700">{fileValidationState.error}</span>
+                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                  <span className="text-sm text-red-400">{fileValidationState.error}</span>
                 </div>
               </div>
             )}
             
             {fileInfo && !fileValidationState.validating && !fileValidationState.error && (
-              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="mt-3 p-3 rounded-lg" style={{backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)'}}>
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-sm text-green-700">✅ File is unique and ready for contract creation</span>
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" style={{color: 'var(--success)'}} />
+                  <span className="text-sm" style={{color: 'var(--text-secondary)'}}>✅ File is unique and ready for contract creation</span>
                 </div>
               </div>
             )}
             {errors.file && (
               <div className="flex items-center space-x-2 mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
                 <AlertCircle className="w-4 h-4 text-red-500" />
-                <span className="text-sm text-red-600">{errors.file}</span>
+                <span className="text-sm text-red-400">{errors.file}</span>
               </div>
             )}
           </div>
 
           {/* Contract Preview */}
           {fileInfo && isFormValid && (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
+            <div className="rounded-2xl p-6" style={{background: 'linear-gradient(to bottom right, var(--success-bg), var(--warning-bg))', border: '1px solid var(--border-primary)'}}>
               <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--success-bg)'}}>
+                  <CheckCircle className="w-5 h-5" style={{color: 'var(--success)'}} />
                 </div>
-                <h3 className="text-lg font-semibold text-green-800">Contract Preview</h3>
+                <h3 className="text-lg font-semibold" style={{color: 'var(--text-primary)'}}>Contract Preview</h3>
               </div>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-sm font-medium text-green-700">Contract Name:</span>
-                    <p className="text-sm text-green-600">{formData.contractName}</p>
+                    <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Contract Name:</span>
+                    <p className="text-sm" style={{color: 'var(--text-secondary)'}}>{formData.contractName}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-green-700">Document:</span>
-                    <p className="text-sm text-green-600">{fileInfo.name}</p>
+                    <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Document:</span>
+                    <p className="text-sm" style={{color: 'var(--text-secondary)'}}>{fileInfo.name}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-green-700">File Size:</span>
-                    <p className="text-sm text-green-600">{(fileInfo.size / (1024 * 1024)).toFixed(2)} MB</p>
+                    <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>File Size:</span>
+                    <p className="text-sm" style={{color: 'var(--text-secondary)'}}>{(fileInfo.size / (1024 * 1024)).toFixed(2)} MB</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-green-700">Your Role:</span>
-                    <p className="text-sm text-green-600">{getRoleLabel(formData.initiatorRole)}</p>
+                    <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Your Role:</span>
+                    <p className="text-sm" style={{color: 'var(--text-secondary)'}}>{getRoleLabel(formData.initiatorRole)}</p>
                   </div>
                 </div>
-                <div className="pt-3 border-t border-green-200">
-                  <span className="text-sm font-medium text-green-700">Document Hash:</span>
-                  <div className="text-xs text-green-600 font-mono mt-1 break-all bg-green-100 p-2 rounded">
+                <div className="pt-3 border-t" style={{borderColor: 'var(--border-secondary)'}}>
+                  <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Document Hash:</span>
+                  <div className="text-xs font-mono mt-1 break-all p-2 rounded" style={{color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-hover)'}}>
                     {fileInfo.hash}
                   </div>
                 </div>
                 {formData.metadata && (
                   <div className="pt-2">
-                    <span className="text-sm font-medium text-green-700">Metadata:</span>
-                    <p className="text-sm text-green-600 mt-1">{formData.metadata}</p>
+                    <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Metadata:</span>
+                    <p className="text-sm mt-1" style={{color: 'var(--text-secondary)'}}>{formData.metadata}</p>
                   </div>
                 )}
               </div>
@@ -1018,12 +1056,12 @@ const ModernContractForm = ({
           )}
 
           {/* Security Notice */}
-          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
+          <div className="rounded-2xl p-6" style={{background: 'var(--warning-bg)', border: '1px solid var(--border-secondary)'}}>
             <div className="flex items-center space-x-3 mb-3">
-              <Shield className="w-5 h-5 text-amber-600" />
-              <h3 className="font-semibold text-amber-800">Security Notice</h3>
+              <Shield className="w-5 h-5" style={{color: 'var(--accent-primary)'}} />
+              <h3 className="font-semibold" style={{color: 'var(--text-primary)'}}>Security Notice</h3>
             </div>
-            <div className="space-y-2 text-sm text-amber-700">
+            <div className="space-y-2 text-sm" style={{color: 'var(--text-secondary)'}}>
               <p>• Your document will be hashed using SHA-256</p>
               <p>• Only the hash is stored on-chain, not the document</p>
               <p>• All parties must sign with their private keys</p>

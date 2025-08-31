@@ -1,4 +1,4 @@
-# Digital Notarized Contracts
+# Digitally Notarized Contracts
 
 A React-based frontend application for managing digital contracts on a Substrate blockchain. This application provides a secure, transparent, and immutable platform for three-party contract management with cryptographic verification.
 

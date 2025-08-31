@@ -43,7 +43,7 @@ export const WalletProvider = ({ children }) => {
     const autoConnect = async () => {
       if (extensionAvailable && !account && !connecting && !disconnecting) {
         try {
-          const extensions = await web3Enable('Digital Notarized Contracts');
+          const extensions = await web3Enable('Digitally Notarized Contracts');
           if (extensions.length > 0) {
             setInjectedExtensions(extensions);
             const accountsList = await web3Accounts();
@@ -83,7 +83,7 @@ export const WalletProvider = ({ children }) => {
       console.log('🔗 Connecting to Polkadot wallet extension...');
       
       // Enable extension with specific app name
-      const extensions = await web3Enable('Digital Notarized Contracts');
+      const extensions = await web3Enable('Digitally Notarized Contracts');
       
       if (extensions.length === 0) {
         throw new Error(
@@ -201,7 +201,7 @@ export const WalletProvider = ({ children }) => {
         // Dispatch custom events that some extensions listen for
         window.dispatchEvent(new CustomEvent('polkadot-disconnect', {
           detail: { 
-            origin: 'Digital Notarized Contracts',
+            origin: 'Digitally Notarized Contracts',
             action: 'disconnect',
             timestamp: Date.now()
           }
@@ -209,7 +209,7 @@ export const WalletProvider = ({ children }) => {
 
         window.dispatchEvent(new CustomEvent('substrate-disconnect', {
           detail: { 
-            origin: 'Digital Notarized Contracts'
+            origin: 'Digitally Notarized Contracts'
           }
         }));
         
@@ -292,14 +292,14 @@ export const WalletProvider = ({ children }) => {
       
       if (onStatusCallback) {
         onStatusCallback(
-          'ℹ️ Extension popup should open. Find "Digital Notarized Contracts" and click disconnect.',
+          'ℹ️ Extension popup should open. Find "Digitally Notarized Contracts" and click disconnect.',
           'info'
         );
       }
     } catch (e) {
       if (onStatusCallback) {
         onStatusCallback(
-          'ℹ️ Please manually open the Polkadot.js extension, find "Digital Notarized Contracts" in connected sites, and click disconnect.',
+          'ℹ️ Please manually open the Polkadot.js extension, find "Digitally Notarized Contracts" in connected sites, and click disconnect.',
           'warning'
         );
       }
@@ -320,7 +320,7 @@ export const WalletProvider = ({ children }) => {
           if (extension.enable) {
             try {
               // Request with disconnect flag
-              await extension.enable('Digital Notarized Contracts', { disconnect: true });
+              await extension.enable('Digitally Notarized Contracts', { disconnect: true });
             } catch (e) {
               // Expected to fail, this is just a signal
             }

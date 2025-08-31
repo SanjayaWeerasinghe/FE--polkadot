@@ -13,9 +13,9 @@ const ModernDashboard = ({ onNavigate }) => {
       title: 'Create Contract',
       description: 'Upload documents and initiate new digital contracts with cryptographic security',
       icon: FileText,
-      gradient: 'from-blue-500 to-cyan-500',
-      bgGradient: 'from-blue-50 to-cyan-50',
-      borderColor: 'border-blue-200',
+      gradient: 'from-[#051622] to-[#1ba098]',
+      bgGradient: 'from-[#051622]/5 to-[#1ba098]/10',
+      borderColor: 'var(--border-primary)',
       stats: 'Multi-party verification'
     },
     {
@@ -23,9 +23,9 @@ const ModernDashboard = ({ onNavigate }) => {
       title: 'Sign Contract',
       description: 'Digitally sign existing contracts using your wallet with blockchain verification',
       icon: PenTool,
-      gradient: 'from-purple-500 to-pink-500',
-      bgGradient: 'from-purple-50 to-pink-50',
-      borderColor: 'border-purple-200',
+      gradient: 'from-[#1ba098] to-[#deb992]',
+      bgGradient: 'from-[#1ba098]/5 to-[#deb992]/10',
+      borderColor: 'var(--border-primary)',
       stats: 'Cryptographic signatures'
     },
     {
@@ -33,9 +33,9 @@ const ModernDashboard = ({ onNavigate }) => {
       title: 'My Contracts',
       description: 'View and manage all your contracts with real-time status tracking',
       icon: Eye,
-      gradient: 'from-emerald-500 to-teal-500',
-      bgGradient: 'from-emerald-50 to-teal-50',
-      borderColor: 'border-emerald-200',
+      gradient: 'from-[#deb992] to-[#051622]',
+      bgGradient: 'from-[#deb992]/5 to-[#051622]/10',
+      borderColor: 'var(--border-primary)',
       stats: 'Immutable records'
     }
   ];
@@ -52,7 +52,7 @@ const ModernDashboard = ({ onNavigate }) => {
       return {
         text: 'Login to Get Started',
         action: () => onNavigate('login'),
-        gradient: 'from-purple-600 to-pink-600',
+        gradient: 'from-[#051622] to-[#1ba098]',
         icon: User
       };
     }
@@ -61,7 +61,7 @@ const ModernDashboard = ({ onNavigate }) => {
       return {
         text: 'Verify Your Email',
         action: () => onNavigate('login'),
-        gradient: 'from-yellow-600 to-orange-600',
+        gradient: 'from-[#deb992] to-[#1ba098]',
         icon: User
       };
     }
@@ -70,7 +70,7 @@ const ModernDashboard = ({ onNavigate }) => {
       return {
         text: 'Connect Your Wallet',
         action: () => {}, // Wallet connection handled by navbar
-        gradient: 'from-green-600 to-teal-600',
+        gradient: 'from-[#1ba098] to-[#051622]',
         icon: Key
       };
     }
@@ -79,7 +79,7 @@ const ModernDashboard = ({ onNavigate }) => {
       return {
         text: 'Add Wallet Address',
         action: () => onNavigate('publicKeys'),
-        gradient: 'from-blue-600 to-indigo-600',
+        gradient: 'from-[#1ba098] to-[#deb992]',
         icon: Key
       };
     }
@@ -87,7 +87,7 @@ const ModernDashboard = ({ onNavigate }) => {
     return {
       text: 'Create Your First Contract',
       action: () => onNavigate('initiate'),
-      gradient: 'from-blue-600 to-purple-600',
+      gradient: 'from-[#051622] to-[#1ba098]',
       icon: FileText
     };
   };
@@ -95,29 +95,29 @@ const ModernDashboard = ({ onNavigate }) => {
   const callToAction = getCallToAction();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" style={{color: 'var(--text-primary)'}}>
       {/* Status Banner */}
       {isAuthenticated && isVerified && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+        <div className="bg-gradient-to-r rounded-2xl p-6" style={{backgroundColor: 'var(--success-bg)', border: '1px solid var(--border-primary)'}}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <User className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--success-bg)'}}>
+                <User className="w-6 h-6" style={{color: 'var(--success)'}} />
               </div>
               <div>
-                <h3 className="font-semibold text-green-900">
+                <h3 className="font-semibold" style={{color: 'var(--text-primary)'}}>
                   Welcome back, {user?.email?.split('@')[0] || 'User'}!
                 </h3>
-                <div className="flex items-center space-x-4 text-sm text-green-700">
+                <div className="flex items-center space-x-4 text-sm" style={{color: 'var(--text-secondary)'}}>
                   <span>✓ Email verified</span>
                   {account ? (
                     canUsePublicKey(account.address) ? (
                       <span>✓ Wallet connected & registered</span>
                     ) : (
-                      <span className="text-yellow-700">⚠ Wallet not registered</span>
+                      <span style={{color: 'var(--warning)'}}>⚠ Wallet not registered</span>
                     )
                   ) : (
-                    <span className="text-yellow-700">⚠ Wallet not connected</span>
+                    <span style={{color: 'var(--warning)'}}>⚠ Wallet not connected</span>
                   )}
                 </div>
               </div>
@@ -125,7 +125,8 @@ const ModernDashboard = ({ onNavigate }) => {
             {account && !canUsePublicKey(account.address) && (
               <button
                 onClick={() => onNavigate('publicKeys')}
-                className="bg-green-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-green-700 transition-colors"
+                className="px-4 py-2 rounded-xl font-medium transition-colors hover:opacity-80"
+                style={{backgroundColor: 'var(--success)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)', border: '1px solid'}}
               >
                 Add Wallet Address
               </button>
@@ -135,15 +136,23 @@ const ModernDashboard = ({ onNavigate }) => {
       )}
 
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50 rounded-3xl p-8 md:p-12 border border-gray-200/50">
+      <div className="relative overflow-hidden glass-card-dark rounded-3xl p-8 md:p-12">
         <div className="relative z-10">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
-                Digital Notarized Contracts
+              <span 
+                className="bg-clip-text text-transparent"
+                style={{
+                  background: 'linear-gradient(to right, var(--text-primary), var(--success), var(--border-primary))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
+              >
+                Digitally Notarized Contracts
               </span>
             </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+            <p className="text-xl mb-8 leading-relaxed" style={{color: 'var(--text-secondary)'}}>
               Secure, transparent, and immutable contract management powered by blockchain technology. 
               Experience the future of digital agreements.
             </p>
@@ -153,11 +162,11 @@ const ModernDashboard = ({ onNavigate }) => {
               {stats.map((stat) => {
                 const Icon = stat.icon;
                 return (
-                  <div key={stat.label} className="flex items-center space-x-3 bg-white/70 backdrop-blur-sm rounded-2xl px-6 py-3 border border-gray-200/50">
-                    <Icon className="w-5 h-5 text-blue-600" />
+                  <div key={stat.label} className="flex items-center space-x-3 backdrop-blur-sm rounded-2xl px-6 py-3" style={{backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-primary)'}}>
+                    <Icon className="w-5 h-5" style={{color: 'var(--success)'}} />
                     <div className="text-left">
-                      <div className="font-bold text-gray-900">{stat.value}</div>
-                      <div className="text-sm text-gray-600">{stat.label}</div>
+                      <div className="font-bold" style={{color: 'var(--text-primary)'}}>{stat.value}</div>
+                      <div className="text-sm" style={{color: 'var(--text-tertiary)'}}>{stat.label}</div>
                     </div>
                   </div>
                 );
@@ -166,7 +175,8 @@ const ModernDashboard = ({ onNavigate }) => {
 
             <button 
               onClick={callToAction.action}
-              className={`bg-gradient-to-r ${callToAction.gradient} text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 inline-flex items-center space-x-2`}
+              className="px-8 py-4 rounded-2xl font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 inline-flex items-center space-x-2"
+              style={{background: 'linear-gradient(to right, var(--accent-dark), var(--success))', color: 'var(--text-primary)', border: '1px solid var(--border-primary)'}}
             >
               <callToAction.icon className="w-5 h-5" />
               <span>{callToAction.text}</span>
@@ -176,8 +186,8 @@ const ModernDashboard = ({ onNavigate }) => {
         </div>
         
         {/* Background decorations */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl" style={{background: 'linear-gradient(to bottom right, var(--success-bg), var(--warning-bg))'}}></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl" style={{background: 'linear-gradient(to top right, var(--warning-bg), var(--success-bg))'}}></div>
       </div>
 
       {/* Feature Cards */}
@@ -187,21 +197,21 @@ const ModernDashboard = ({ onNavigate }) => {
           return (
             <div
               key={feature.id}
-              className={`group relative overflow-hidden bg-gradient-to-br ${feature.bgGradient} rounded-2xl p-6 border ${feature.borderColor} hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1`}
+              className="group relative overflow-hidden glass-card-dark rounded-2xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1"
+              style={{border: '1px solid var(--border-primary)', background: 'linear-gradient(to bottom right, var(--bg-card), var(--bg-secondary))', animationDelay: `${index * 0.1}s`}}
               onClick={() => onNavigate(feature.id)}
-              style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="relative z-10">
-                <div className={`w-12 h-12 bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300" style={{background: 'linear-gradient(to bottom right, var(--accent-dark), var(--success))'}}>
+                  <Icon className="w-6 h-6" style={{color: 'var(--text-primary)'}} />
                 </div>
                 
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600 mb-4 leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>{feature.title}</h3>
+                <p className="mb-4 leading-relaxed" style={{color: 'var(--text-secondary)'}}>{feature.description}</p>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-500">{feature.stats}</span>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
+                  <span className="text-sm font-medium" style={{color: 'var(--text-tertiary)'}}>{feature.stats}</span>
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-all duration-200" style={{color: 'var(--text-muted)'}} />
                 </div>
               </div>
               
@@ -216,8 +226,8 @@ const ModernDashboard = ({ onNavigate }) => {
       </div>
 
       {/* How It Works Section */}
-      <div className="bg-white rounded-3xl p-8 border border-gray-200/50 shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">How It Works</h2>
+      <div className="glass-card-dark rounded-3xl p-8 shadow-sm" style={{border: '1px solid var(--border-primary)'}}>
+        <h2 className="text-2xl font-bold text-center mb-8" style={{color: 'var(--text-primary)'}}>How It Works</h2>
         
         <div className="grid md:grid-cols-3 gap-8">
           {[
@@ -244,15 +254,15 @@ const ModernDashboard = ({ onNavigate }) => {
             return (
               <div key={step.step} className="text-center">
                 <div className="relative mb-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                    <Icon className="w-8 h-8 text-gray-600" />
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-2" style={{background: 'linear-gradient(to bottom right, var(--bg-hover), var(--bg-card))'}}>
+                    <Icon className="w-8 h-8" style={{color: 'var(--text-secondary)'}} />
                   </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" style={{background: 'linear-gradient(to bottom right, var(--success), var(--border-primary))', color: 'var(--text-primary)'}}>
                     {step.step}
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.title}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{step.description}</p>
+                <h3 className="text-lg font-semibold mb-2" style={{color: 'var(--text-primary)'}}>{step.title}</h3>
+                <p className="text-sm leading-relaxed" style={{color: 'var(--text-secondary)'}}>{step.description}</p>
               </div>
             );
           })}

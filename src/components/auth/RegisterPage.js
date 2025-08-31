@@ -79,99 +79,103 @@ const RegisterPage = ({ onBack, onSwitchToLogin, onRegistrationSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)'}}>
       <div className="w-full max-w-md">
         {/* Back Button */}
         <button
           onClick={onBack}
-          className="mb-6 flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+          className="mb-6 flex items-center space-x-2 hover:opacity-80 transition-colors"
+          style={{color: '#e9f5f9cc'}}
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Dashboard</span>
         </button>
 
         {/* Registration Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="glass-card-dark rounded-2xl shadow-xl p-8" style={{border: '1px solid #ffcf98'}}>
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-blue-600" />
+            <div className="w-16 h-16 bg-[#1ba098]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-[#1ba098]" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-            <p className="text-gray-600">Join Digital Contracts and manage your agreements securely</p>
+            <h1 className="text-3xl font-bold mb-2" style={{color: 'var(--text-primary)', backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-subtle)'}}>Create Account</h1>
+            <p style={{color: '#e9f5f9cc'}}>Join Digital Contracts and manage your agreements securely</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold mb-2" style={{color: 'var(--text-primary)', backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-subtle)'}}>
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{color: '#e9f5f9cc'}} />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                    formErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all  ${
+                    formErrors.email ? 'border-red-400' : ''
                   }`}
+                  style={{color: 'var(--text-primary)', backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-subtle)'}}
                   placeholder="Enter your email address"
                   disabled={isLoading}
                 />
               </div>
               {formErrors.email && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>
+                <p className="text-red-400 text-sm mt-1">{formErrors.email}</p>
               )}
             </div>
 
             {/* Password Field */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold mb-2" style={{color: 'var(--text-primary)', backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-subtle)'}}>
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{color: '#e9f5f9cc'}} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                    formErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all  ${
+                    formErrors.password ? 'border-red-400' : ''
                   }`}
+                  style={{color: 'var(--text-primary)', backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-subtle)'}}
                   placeholder="Create a strong password"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-80"
+                  style={{color: '#e9f5f9cc'}}
                   disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {formErrors.password && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.password}</p>
+                <p className="text-red-400 text-sm mt-1">{formErrors.password}</p>
               )}
               <p className="text-gray-500 text-xs mt-1">Must be at least 6 characters long</p>
             </div>
 
             {/* Confirm Password Field */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold mb-2" style={{color: 'var(--text-primary)', backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-subtle)'}}>
                 Confirm Password
               </label>
               <div className="relative">
-                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{color: '#e9f5f9cc'}} />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                    formErrors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    formErrors.confirmPassword ? 'border-red-400 ' : ''
                   }`}
                   placeholder="Confirm your password"
                   disabled={isLoading}
@@ -179,27 +183,28 @@ const RegisterPage = ({ onBack, onSwitchToLogin, onRegistrationSuccess }) => {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-80"
+                  style={{color: '#e9f5f9cc'}}
                   disabled={isLoading}
                 >
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {formErrors.confirmPassword && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.confirmPassword}</p>
+                <p className="text-red-400 text-sm mt-1">{formErrors.confirmPassword}</p>
               )}
             </div>
 
             {/* Global Error */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-red-800 text-sm">{error}</p>
+              <div className=" rounded-xl p-4" style={{border: '1px solid #ffcf98'}}>
+                <p className="text-red-400 text-sm">{error}</p>
               </div>
             )}
 
             {/* Terms Notice */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <p className="text-blue-800 text-sm">
+            <div className="bg-[#1ba098]/10 rounded-xl p-4" style={{border: '1px solid #ffcf98'}}>
+              <p className="text-sm" style={{color: '#ffcf98'}}>
                 By creating an account, you agree to our Terms of Service and Privacy Policy. 
                 Your email will be used for verification and important account notifications.
               </p>
@@ -209,11 +214,11 @@ const RegisterPage = ({ onBack, onSwitchToLogin, onRegistrationSuccess }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
+              className="w-full py-3 rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2" style={{background: 'linear-gradient(to right, var(--accent-dark), var(--accent-primary))', color: 'var(--text-primary)'}}
             >
               {isLoading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{borderColor: 'var(--text-primary)', borderTopColor: 'transparent'}}></div>
                   <span>Creating Account...</span>
                 </>
               ) : (
@@ -226,12 +231,13 @@ const RegisterPage = ({ onBack, onSwitchToLogin, onRegistrationSuccess }) => {
           </form>
 
           {/* Login Link */}
-          <div className="text-center mt-8 pt-6 border-t border-gray-200">
-            <p className="text-gray-600">
+          <div className="text-center mt-8 pt-6 border-t" style={{borderColor: '#ffcf98'}}>
+            <p style={{color: '#e9f5f9cc'}}>
               Already have an account?{' '}
               <button
                 onClick={onSwitchToLogin}
-                className="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
+                className="font-semibold transition-colors hover:opacity-80"
+                style={{color: '#ffcf98'}}
                 disabled={isLoading}
               >
                 Sign in

@@ -122,21 +122,23 @@ const ModernFileUpload = ({
   return (
     <div className="space-y-4">
       {title && (
-        <label className="block text-sm font-semibold text-gray-900 mb-2">
+        <label className="block text-sm font-semibold mb-2" style={{color: '#e9f5f9'}}>
           {title}
         </label>
       )}
       
       <div
         className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 ${
-          isDragging
-            ? 'border-blue-400 bg-blue-50 scale-102'
-            : fileInfo
-            ? 'border-green-400 bg-green-50'
-            : error
-            ? 'border-red-400 bg-red-50'
-            : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        } ${isDragging ? 'scale-102' : ''}`}
+        style={{
+          borderColor: isDragging ? 'var(--success)' :
+                      fileInfo ? 'var(--success)' :
+                      error ? 'var(--error)' : 'var(--border-subtle)',
+          backgroundColor: isDragging ? 'var(--success-bg)' :
+                          fileInfo ? 'var(--success-bg)' :
+                          error ? 'var(--error-bg)' : 'var(--bg-hover)'
+        }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -154,20 +156,20 @@ const ModernFileUpload = ({
         {fileInfo ? (
           // Success State
           <div className="space-y-3">
-            <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto" style={{backgroundColor: 'var(--success-bg)'}}>
+              <CheckCircle className="w-8 h-8" style={{color: 'var(--success)'}} />
             </div>
             <div>
               <div className="flex items-center justify-center space-x-2 mb-2">
                 <span className="text-2xl">{getFileIcon(fileInfo.name)}</span>
-                <p className="font-semibold text-green-800">{fileInfo.name}</p>
+                <p className="font-semibold" style={{color: 'var(--text-primary)'}}>{fileInfo.name}</p>
               </div>
-              <p className="text-sm text-green-600">
+              <p className="text-sm" style={{color: 'var(--text-secondary)'}}>
                 {formatFileSize(fileInfo.size)}
               </p>
-              <div className="mt-3 p-3 bg-green-100 rounded-lg">
-                <p className="text-xs text-green-700 font-medium mb-1">Document Hash:</p>
-                <p className="text-xs text-green-600 font-mono break-all">
+              <div className="mt-3 p-3 rounded-lg" style={{backgroundColor: 'var(--success-bg)', border: '1px solid var(--border-primary)'}}>
+                <p className="text-xs font-medium mb-1" style={{color: 'var(--text-primary)'}}>Document Hash:</p>
+                <p className="text-xs font-mono break-all" style={{color: 'var(--text-secondary)'}}>
                   {fileInfo.hash.slice(0, 32)}...
                 </p>
               </div>
@@ -178,7 +180,8 @@ const ModernFileUpload = ({
                 onFileSelect(null);
                 setError(null);
               }}
-              className="text-sm text-green-600 hover:text-green-800 underline"
+              className="text-sm hover:opacity-80 underline"
+              style={{color: 'var(--success)'}}
             >
               Remove file
             </button>
@@ -186,19 +189,19 @@ const ModernFileUpload = ({
         ) : error ? (
           // Error State
           <div className="space-y-3">
-            <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto">
-              <AlertCircle className="w-8 h-8 text-red-600" />
+            <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto">
+              <AlertCircle className="w-8 h-8 text-red-400" />
             </div>
             <div>
-              <p className="font-semibold text-red-800 mb-2">Upload Error</p>
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="font-semibold mb-2" style={{color: '#e9f5f9'}}>Upload Error</p>
+              <p className="text-sm text-red-400">{error}</p>
             </div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setError(null);
               }}
-              className="text-sm text-red-600 hover:text-red-800 underline"
+              className="text-sm text-red-400 hover:opacity-80 underline"
             >
               Try again
             </button>
@@ -207,20 +210,22 @@ const ModernFileUpload = ({
           // Default State
           <div className="space-y-3">
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto transition-colors duration-300 ${
-              isDragging ? 'bg-blue-100' : 'bg-gray-100'
+              isDragging ? 'bg-[#1ba098]/20' : 'bg-white/10'
             }`}>
-              <Upload className={`w-8 h-8 transition-colors duration-300 ${
-                isDragging ? 'text-blue-600' : 'text-gray-400'
-              }`} />
+              <Upload 
+                className="w-8 h-8 transition-colors duration-300" 
+                style={{color: isDragging ? '#1ba098' : '#e9f5f9cc'}} 
+              />
             </div>
             <div>
-              <p className={`text-lg font-semibold transition-colors duration-300 ${
-                isDragging ? 'text-blue-700' : 'text-gray-700'
-              }`}>
+              <p 
+                className="text-lg font-semibold transition-colors duration-300" 
+                style={{color: isDragging ? '#1ba098' : '#e9f5f9'}}
+              >
                 {isDragging ? 'Drop your file here' : 'Drop your contract here'}
               </p>
-              <p className="text-sm text-gray-500">or click to browse files</p>
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-sm" style={{color: 'var(--text-secondary)'}}>or click to browse files</p>
+              <p className="text-xs mt-2" style={{color: '#e9f5f9cc'}}>
                 {description} (max {(maxSize / (1024 * 1024)).toFixed(0)}MB)
               </p>
             </div>

@@ -148,20 +148,21 @@ const SignContract = ({ onBack, onStatus }) => {
         <button
           onClick={onBack}
           disabled={isSigning}
-          className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
+          className="p-2 rounded-xl transition-colors disabled:opacity-50 hover:opacity-80"
+          style={{backgroundColor: 'var(--bg-hover)'}}
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+          <ArrowLeft className="w-5 h-5" style={{color: 'var(--text-secondary)'}} />
         </button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Sign Contract</h1>
-          <p className="text-gray-600">Upload the contract document to verify and sign</p>
+          <h1 className="text-3xl font-bold" style={{color: 'var(--text-primary)'}}>Sign Contract</h1>
+          <p style={{color: 'var(--text-secondary)'}}>Upload the contract document to verify and sign</p>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Left Column - File Upload */}
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+          <div className="glass-card-dark rounded-2xl p-6 shadow-sm" style={{border: '1px solid var(--border-secondary)'}}>
             <ModernFileUpload
               onFileSelect={setFileInfo}
               fileInfo={fileInfo}
@@ -178,52 +179,54 @@ const SignContract = ({ onBack, onStatus }) => {
         <div className="space-y-6">
 
           {fileInfo && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Contract Verification</h3>
+            <div className="glass-card-dark rounded-2xl p-6 shadow-sm" style={{border: '1px solid var(--border-secondary)'}}>
+              <h3 className="text-lg font-semibold mb-4" style={{color: 'var(--text-primary)'}}>Contract Verification</h3>
               
               {verifying ? (
-                <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <div className="flex items-center space-x-3 p-4 rounded-xl" style={{backgroundColor: 'var(--info-bg)', border: '1px solid var(--info)'}}>
                   <ModernSpinner size="md" color="blue" />
-                  <span className="text-blue-700 font-medium">Verifying contract on blockchain...</span>
+                  <span className="font-medium" style={{color: 'var(--info)'}}>Verifying contract on blockchain...</span>
                 </div>
               ) : contractInfo ? (
                 // Check if contract exists and has the necessary data
                 (contractInfo.exists !== false && (contractInfo.contractName || contractInfo.name || contractInfo.fileHash)) ? (
                   <div className="space-y-4">
                     {/* Contract Found */}
-                    <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-xl border border-green-200">
-                      <CheckCircle className="w-6 h-6 text-green-600" />
+                    <div className="flex items-center space-x-3 p-4 rounded-xl" style={{backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)'}}>
+                      <CheckCircle className="w-6 h-6" style={{color: 'var(--success)'}} />
                       <div>
-                        <p className="font-medium text-green-800">Contract Found</p>
-                        <p className="text-sm text-green-600">Document verified on blockchain</p>
+                        <p className="font-medium" style={{color: 'var(--success)'}}>Contract Found</p>
+                        <p className="text-sm" style={{color: 'var(--success)'}}>Document verified on blockchain</p>
                       </div>
                     </div>
                     
                     {/* Contract Details */}
-                    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                      <h4 className="font-semibold text-gray-900">Contract Information</h4>
+                    <div className="rounded-xl p-4 space-y-3" style={{backgroundColor: 'var(--bg-hover)'}}>
+                      <h4 className="font-semibold" style={{color: 'var(--text-primary)'}}>Contract Information</h4>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-gray-600">Name:</span>
-                          <span className="ml-2 text-gray-800 font-medium">{contractInfo.contractName || contractInfo.name}</span>
+                          <span style={{color: 'var(--text-secondary)'}}>Name:</span>
+                          <span className="ml-2 font-medium" style={{color: 'var(--text-primary)'}}>{contractInfo.contractName || contractInfo.name}</span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Status:</span>
-                          <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                            contractInfo.status === 'BothPartiesSigned' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
+                          <span style={{color: 'var(--text-secondary)'}}>Status:</span>
+                          <span 
+                            className="ml-2 px-2 py-1 rounded-full text-xs font-medium"
+                            style={{
+                              backgroundColor: contractInfo.status === 'BothPartiesSigned' ? 'var(--success-bg)' : 'var(--warning-bg)',
+                              color: contractInfo.status === 'BothPartiesSigned' ? 'var(--success)' : 'var(--warning)'
+                            }}
+                          >
                             {contractInfo.status.replace(/([A-Z])/g, ' $1').trim()}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Signatures:</span>
-                          <span className="ml-2 text-gray-800">{contractInfo.signatures?.length || 0} of 2</span>
+                          <span style={{color: 'var(--text-secondary)'}}>Signatures:</span>
+                          <span className="ml-2" style={{color: 'var(--text-primary)'}}>{contractInfo.signatures?.length || 0} of 2</span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Your Role:</span>
-                          <span className="ml-2 text-gray-800">
+                          <span style={{color: 'var(--text-secondary)'}}>Your Role:</span>
+                          <span className="ml-2" style={{color: 'var(--text-primary)'}}>
                             {contractInfo.firstParty === account?.address ? 'First Party' :
                              contractInfo.secondParty === account?.address ? 'Second Party' : 'Observer'}
                           </span>
@@ -236,7 +239,8 @@ const SignContract = ({ onBack, onStatus }) => {
                       <button
                         onClick={handleSign}
                         disabled={isSigning}
-                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 transition-all duration-200"
+                        className="w-full py-3 rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 transition-all duration-200"
+                        style={{background: 'linear-gradient(to right, var(--success), var(--accent-primary))', color: 'var(--text-primary)'}}
                       >
                         {isSigning ? (
                           <span className="flex items-center justify-center space-x-2">
@@ -251,15 +255,15 @@ const SignContract = ({ onBack, onStatus }) => {
                         )}
                       </button>
                     ) : contractInfo.status === 'BothPartiesSigned' ? (
-                      <div className="text-center p-4 bg-green-50 rounded-xl border border-green-200">
-                        <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                        <p className="text-green-800 font-medium">Contract Fully Signed</p>
-                        <p className="text-sm text-green-600">All parties have signed this contract</p>
+                      <div className="text-center p-4 rounded-xl" style={{backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)'}}>
+                        <CheckCircle className="w-8 h-8 mx-auto mb-2" style={{color: 'var(--success)'}} />
+                        <p className="font-medium" style={{color: 'var(--success)'}}>Contract Fully Signed</p>
+                        <p className="text-sm" style={{color: 'var(--success)'}}>All parties have signed this contract</p>
                       </div>
                     ) : (
-                      <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-200">
-                        <p className="text-gray-600">You cannot sign this contract at this time</p>
-                        <p className="text-sm text-gray-500 mt-1">
+                      <div className="text-center p-4 rounded-xl" style={{backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-secondary)'}}>
+                        <p style={{color: 'var(--text-secondary)'}}>You cannot sign this contract at this time</p>
+                        <p className="text-sm mt-1" style={{color: 'var(--text-muted)'}}>
                           {contractInfo.firstParty !== account?.address && contractInfo.secondParty !== account?.address
                             ? 'You are not a party to this contract'
                             : 'Wait for your turn to sign'
@@ -269,47 +273,47 @@ const SignContract = ({ onBack, onStatus }) => {
                     )}
                   </div>
                 ) : contractInfo.error ? (
-                  <div className="flex items-center space-x-3 p-4 bg-red-50 rounded-xl border border-red-200">
-                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  <div className="flex items-center space-x-3 p-4 bg-red-500/50 rounded-xl border border-red-500/200">
+                    <AlertCircle className="w-6 h-6" style={{color: 'var(--error)'}} />
                     <div>
-                      <p className="font-medium text-red-800">Verification Error</p>
-                      <p className="text-sm text-red-600">{contractInfo.error}</p>
+                      <p className="font-medium" style={{color: 'var(--error)'}}>Verification Error</p>
+                      <p className="text-sm" style={{color: 'var(--error)'}}>{contractInfo.error}</p>
                     </div>
                   </div>
                 ) : contractInfo.exists === false ? (
-                  <div className="flex items-center space-x-3 p-4 bg-red-50 rounded-xl border border-red-200">
-                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  <div className="flex items-center space-x-3 p-4 bg-red-500/50 rounded-xl border border-red-500/200">
+                    <AlertCircle className="w-6 h-6" style={{color: 'var(--error)'}} />
                     <div>
-                      <p className="font-medium text-red-800">Contract Not Found</p>
-                      <p className="text-sm text-red-600">No contract exists with this document hash</p>
+                      <p className="font-medium" style={{color: 'var(--error)'}}>Contract Not Found</p>
+                      <p className="text-sm" style={{color: 'var(--error)'}}>No contract exists with this document hash</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-3 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                    <AlertCircle className="w-6 h-6 text-yellow-600" />
+                  <div className="flex items-center space-x-3 p-4 rounded-xl" style={{backgroundColor: 'var(--warning-bg)', border: '1px solid var(--warning)'}}>
+                    <AlertCircle className="w-6 h-6" style={{color: 'var(--warning)'}} />
                     <div>
-                      <p className="font-medium text-yellow-800">Unexpected Contract Data</p>
-                      <p className="text-sm text-yellow-600">
+                      <p className="font-medium" style={{color: 'var(--warning)'}}>Unexpected Contract Data</p>
+                      <p className="text-sm" style={{color: 'var(--warning)'}}>
                         Contract found but data format is unexpected. Check console for details.
                       </p>
-                      <pre className="text-xs text-yellow-600 mt-2 bg-yellow-100 p-2 rounded">
+                      <pre className="text-xs mt-2 p-2 rounded" style={{color: 'var(--warning)', backgroundColor: 'var(--warning-bg)'}}>
                         {JSON.stringify(contractInfo, null, 2)}
                       </pre>
                     </div>
                   </div>
                 )
               ) : (
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <p className="text-gray-600">Upload a contract document to verify it on the blockchain</p>
+                <div className="p-4 rounded-xl" style={{backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-secondary)'}}>
+                  <p style={{color: 'var(--text-secondary)'}}>Upload a contract document to verify it on the blockchain</p>
                 </div>
               )}
             </div>
           )}
 
           {/* Instructions */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-            <h3 className="text-lg font-semibold text-blue-800 mb-3">How to Sign</h3>
-            <div className="space-y-2 text-sm text-blue-700">
+          <div className="rounded-2xl p-6" style={{background: 'linear-gradient(to bottom right, var(--info-bg), var(--success-bg))', border: '1px solid var(--border-primary)'}}>
+            <h3 className="text-lg font-semibold mb-3" style={{color: 'var(--success)'}}>How to Sign</h3>
+            <div className="space-y-2 text-sm" style={{color: 'var(--text-primary)'}}>
               <p>1. Upload the exact same document used to create the contract</p>
               <p>2. The system will verify the contract exists on the blockchain</p>
               <p>3. If verified and it's your turn, you can sign the contract</p>
@@ -319,8 +323,8 @@ const SignContract = ({ onBack, onStatus }) => {
 
           {/* Show any global errors */}
           {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-              <p className="text-red-800 font-medium">Error: {error}</p>
+            <div className="p-4 rounded-xl" style={{backgroundColor: 'var(--error-bg)', border: '1px solid var(--error)'}}>
+              <p className="font-medium" style={{color: 'var(--error)'}}>Error: {error}</p>
             </div>
           )}
         </div>

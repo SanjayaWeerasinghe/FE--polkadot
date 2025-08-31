@@ -75,7 +75,7 @@ const MainMenu = ({ onNavigate, onStatus }) => {
           <div className="text-6xl">🔐</div>
           <div className="text-center md:text-left flex-1">
             <h4 className="text-xl font-semibold text-gray-800 mb-2">
-              How Digital Notarized Contracts Work
+              How Digitally Notarized Contracts Work
             </h4>
             <p className="text-gray-600 text-sm leading-relaxed">
               Our blockchain-based system ensures contract authenticity through three-party verification (First Party, Second Party, and Notary), 
