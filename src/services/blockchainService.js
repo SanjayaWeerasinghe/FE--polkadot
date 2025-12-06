@@ -138,7 +138,7 @@ class BlockchainService {
     
     // Default endpoints
     return [
-'wss://144.91.67.54:9946',
+'wss://blockchain1.projectfreedom.online:9946',
     ];
   }
 

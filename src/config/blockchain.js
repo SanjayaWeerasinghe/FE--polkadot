@@ -17,7 +17,7 @@ export const getBlockchainEndpoints = () => {
       return process.env.REACT_APP_BLOCKCHAIN_ENDPOINTS.split(',').map(url => url.trim());
     }
     
-    return ['wss://144.91.67.54:9946'];
+    return ['wss://blockchain1.projectfreedom.online:9946'];
 };
 
 /**

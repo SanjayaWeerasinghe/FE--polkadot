@@ -8,7 +8,7 @@ class TransactionDebugService {
   }
 
   // Connect to blockchain with v16 compatibility
-  async connect(endpoint = 'wss://144.91.67.54:9946') {
+  async connect(endpoint = 'wss://blockchain1.projectfreedom.online:9946') {
     if (this.api && this.api.isConnected) {
       return this.api;
     }

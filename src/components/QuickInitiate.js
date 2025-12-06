@@ -122,7 +122,7 @@ export default function QuickInitiate() {
   const initiateContractDirect = async () => {
     try {
       setStatus('🔌 Connecting directly to node...');
-      const ws = new WsProvider('wss://144.91.67.54:9946');
+      const ws = new WsProvider('wss://blockchain1.projectfreedom.online:9946');
       const api = await ApiPromise.create({ provider: ws });
       await api.isReady;
 
